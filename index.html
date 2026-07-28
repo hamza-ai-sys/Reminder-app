@@ -59,7 +59,7 @@
         responseDiv.style.display = 'none';
 
         // REPLACE THIS URL WITH YOUR ACTUAL N8N WEBHOOK TEST/PRODUCTION URL
-        const N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/voice-reminder';
+        const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook-test/voice-reminder';
 
         try {
             const response = await fetch(N8N_WEBHOOK_URL, {
