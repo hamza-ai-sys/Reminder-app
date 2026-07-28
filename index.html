@@ -3,336 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Global Voice Reminder App</title>
+    <title>AI Reminder Gateway</title>
     <style>
-        body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 30px;
-            margin: 0;
-        }
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: #1e1e1e;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        h2 { text-align: center; margin-top: 0; color: #3b82f6; }
-        
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #a3a3a3; font-size: 14px; }
-        
-        input[type="text"], input[type="password"], input[type="datetime-local"], select {
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            background: #2a2a2a;
-            border: 1px solid #3d3d3d;
-            border-radius: 6px;
-            color: white;
-            font-size: 16px;
-        }
-        
-        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-add { background-color: #2563eb; color: white; }
-        .btn-add:hover { background-color: #1d4ed8; }
-        .btn-voice { background-color: #dc2626; color: white; position: relative; }
-        .btn-voice:hover { background-color: #b91c1c; }
-        .btn-voice.recording { background-color: #ef4444; animation: pulse 1.5s infinite; }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-        
-        #status { text-align: center; color: #3b82f6; font-style: italic; margin: 10px 0; min-height: 20px; font-weight: 500; }
-        
-        .reminder-list { margin-top: 25px; }
-        .reminder-item {
-            background: #2d2d2d;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            border-left: 4px solid #3b82f6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .reminder-item.triggered { border-left-color: #10b981; opacity: 0.7; }
-        .task-text { font-weight: 500; }
-        .task-time { font-size: 12px; color: #a3a3a3; margin-top: 4px; }
-        .btn-delete { background: none; color: #ef4444; border: none; cursor: pointer; font-size: 16px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 450px; }
+        h2 { margin-top: 0; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 100px; resize: none; }
+        button { width: 100%; background: #ff6c5f; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #e05b50; }
+        #response { margin-top: 20px; padding: 12px; border-radius: 6px; display: none; font-size: 14px; }
+        .success { background: #e6f4ea; color: #137333; border: 1px solid #ceead6; }
+        .error { background: #fce8e6; color: #c5221f; border: 1px solid #fad2cf; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>⏰ AI Voice Reminder (Multi-Language)</h2>
+<div class="card">
+    <h2>Create New Reminder</h2>
     
-    <!-- API Key Input -->
-    <div class="input-group">
-        <label for="apiKeyInput">🔑 Enter Gemini API Key</label>
-        <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
+    <div class="form-group">
+        <label for="inputType">Input Type</label>
+        <select id="inputType">
+            <option value="text">Text Entry</option>
+            <option value="voice">Voice Transcript</option>
+        </select>
     </div>
 
-    <!-- Text Input Form -->
-    <div class="input-group">
-        <label for="taskInput">Reminder Command</label>
-        <input type="text" id="taskInput" placeholder="Type or click Speak to record in any language...">
+    <div class="form-group">
+        <label for="textPayload">Message Content</label>
+        <textarea id="textPayload" placeholder="Type your reminder or paste voice notes..."></textarea>
     </div>
-    
-    <div class="input-group">
-        <label for="timeInput">Set Trigger Time</label>
-        <input type="datetime-local" id="timeInput">
-    </div>
-    
-    <div class="btn-row">
-        <button class="btn-add" id="addBtn">Save Reminder</button>
-        <button class="btn-voice" id="voiceBtn">🎙️ Speak (Click to Start/Stop)</button>
-    </div>
-    
-    <p id="status"></p>
-    
-    <!-- Display list -->
-    <div class="reminder-list" id="listContainer">
-        <h3 style="border-bottom: 1px solid #333; padding-bottom: 8px; color: #a3a3a3;">Active Reminders</h3>
-        <div id="remindersDiv"></div>
-    </div>
+
+    <button id="submitBtn" onclick="sendReminder()">Send to Pipeline</button>
+    <div id="response"></div>
 </div>
 
-<script type="module">
-    // Import Google Gen AI Library directly in the browser
-    import { GoogleGenAI } from 'https://esm.run/@google/genai';
+<script>
+    async function sendReminder() {
+        const inputType = document.getElementById('inputType').value;
+        const textPayload = document.getElementById('textPayload').value;
+        const responseDiv = document.getElementById('response');
+        const submitBtn = document.getElementById('submitBtn');
 
-    const taskInput = document.getElementById('taskInput');
-    const timeInput = document.getElementById('timeInput');
-    const apiKeyInput = document.getElementById('apiKeyInput');
-    const addBtn = document.getElementById('addBtn');
-    const voiceBtn = document.getElementById('voiceBtn');
-    const status = document.getElementById('status');
-    const remindersDiv = document.getElementById('remindersDiv');
-
-    let reminders = JSON.parse(localStorage.getItem('ai_reminders')) || [];
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
-
-    // Load saved API key if available
-    if (localStorage.getItem('gemini_api_key')) {
-        apiKeyInput.value = localStorage.getItem('gemini_api_key');
-    }
-
-    if (Notification.permission !== "granted") {
-        Notification.requestPermission();
-    }
-
-    function setDefaultTime() {
-        const now = new Date();
-        now.setMinutes(now.getMinutes() + 5);
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        timeInput.value = now.toISOString().slice(0, 16);
-    }
-    setDefaultTime();
-
-    // Native High-Fidelity Audio Recording Framework
-    voiceBtn.addEventListener('click', async () => {
-        const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-            alert("Please enter a valid Gemini API key first.");
+        if (!textPayload.trim()) {
+            showResponse('Please enter some content first.', 'error');
             return;
         }
-        localStorage.setItem('gemini_api_key', apiKey);
 
-        if (!isRecording) {
-            // Start Audio capture
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
+        // UI Feedback during request execution
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Processing...';
+        responseDiv.style.display = 'none';
 
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
+        // REPLACE THIS URL WITH YOUR ACTUAL N8N WEBHOOK TEST/PRODUCTION URL
+        const N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/voice-reminder';
 
-                mediaRecorder.onstop = async () => {
-                    status.innerText = "Processing audio with AI Engine...";
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    await processAudioWithGemini(audioBlob, apiKey);
-                };
-
-                mediaRecorder.start();
-                isRecording = true;
-                voiceBtn.classList.add('recording');
-                voiceBtn.innerText = "🛑 Stop Recording";
-                status.innerText = "Listening closely... Speak now (Urdu, English, etc.)";
-            } catch (err) {
-                status.innerText = "Microphone access denied.";
-                console.error(err);
-            }
-        } else {
-            // Stop Audio capture
-            mediaRecorder.stop();
-            // Stop all tracks on the stream to release mic access hardware
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            isRecording = false;
-            voiceBtn.classList.remove('recording');
-            voiceBtn.innerText = "🎙️ Speak (Click to Start/Stop)";
-        }
-    });
-
-    // Send Audio payload directly to Gemini API
-    async function processAudioWithGemini(audioBlob, apiKey) {
         try {
-            // Convert blob file payload to base64
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-                const base64Audio = reader.result.split(',')[1];
+            const response = await fetch(N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    inputType: inputType,
+                    textPayload: textPayload
+                })
+            });
 
-                const ai = new GoogleGenAI({ apiKey: apiKey });
-                
-                // Call gemini-2.5-flash with the raw audio signature data input
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: [
-                        {
-                            role: 'user',
-                            parts: [
-                                {
-                                    inlineData: {
-                                        mimeType: 'audio/webm',
-                                        data: base64Audio
-                                    }
-                                },
-                                {
-                                    text: "Listen to this audio file carefully. Transcribe the spoken text accurately into its native text format. If spoken in Urdu, output the text in Urdu script. Return ONLY the transcribed text translation with no conversational responses."
-                                }
-                            ]
-                        }
-                    ]
-                });
-
-                taskInput.value = response.text.trim();
-                status.innerText = "Speech captured accurately!";
-            };
-        } catch (error) {
-            status.innerText = "AI processing failed.";
-            console.error(error);
-        }
-    }
-
-    // Save Reminder Schedule
-    addBtn.addEventListener('click', () => {
-        const text = taskInput.value.trim();
-        const targetTime = new Date(timeInput.value).getTime();
-
-        if (!text) {
-            alert("Please type or speak a reminder description first.");
-            return;
-        }
-        if (isNaN(targetTime) || targetTime <= Date.now()) {
-            alert("Please choose a valid time in the future.");
-            return;
-        }
-
-        const reminder = {
-            id: Date.now(),
-            task: text,
-            triggerAt: targetTime,
-            triggered: false
-        };
-
-        reminders.push(reminder);
-        saveAndRender();
-        taskInput.value = "";
-        setDefaultTime();
-        status.innerText = "Reminder locked into timeline!";
-    });
-
-    window.deleteReminder = (id) => {
-        reminders = reminders.filter(r => r.id !== id);
-        saveAndRender();
-    };
-
-    function saveAndRender() {
-        localStorage.setItem('ai_reminders', JSON.stringify(reminders));
-        reminders.sort((a, b) => a.triggerAt - b.triggerAt);
-        
-        remindersDiv.innerHTML = "";
-        if (reminders.length === 0) {
-            remindersDiv.innerHTML = '<p style="color:#666; text-align:center;">No active reminders set.</p>';
-            return;
-        }
-
-        reminders.forEach(r => {
-            const timeString = new Date(r.triggerAt).toLocaleString();
-            const div = document.createElement('div');
-            div.className = `reminder-item ${r.triggered ? 'triggered' : ''}`;
-            div.innerHTML = `
-                <div>
-                    <div class="task-text">${r.task}</div>
-                    <div class="task-time">📅 ${timeString} ${r.triggered ? '(Done)' : ''}</div>
-                </div>
-                <button class="btn-delete" onclick="deleteReminder(${r.id})">🗑️</button>
-            `;
-            remindersDiv.appendChild(div);
-        });
-    }
-
-    // Polling Engine (Evaluates timestamp schedules every 1 second)
-    setInterval(() => {
-        let changed = false;
-        const now = Date.now();
-
-        reminders.forEach(r => {
-            if (!r.triggered && now >= r.triggerAt) {
-                r.triggered = true;
-                changed = true;
-
-                // Tone Generator Alert
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
-                oscillator.connect(audioCtx.destination);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 1.5); 
-
-                // OS Banner Alert Window
-                if (Notification.permission === "granted") {
-                    new Notification("⏰ AI Reminder Alert!", {
-                        body: r.task,
-                        icon: "https://cdn-icons-png.flaticon.com/512/3602/3602145.png"
-                    });
-                } else {
-                    alert(`🚨 REMINDER: ${r.task}`);
-                }
+            if (response.ok) {
+                const data = await response.json();
+                showResponse('Success! Automation processed and logged to Discord.', 'success');
+                document.getElementById('textPayload').value = ''; // Clear form
+            } else {
+                showResponse(`Server error status: ${response.status}`, 'error');
             }
-        });
-
-        if (changed) {
-            saveAndRender();
+        } catch (error) {
+            showResponse(`Network Error: ${error.message}`, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Send to Pipeline';
         }
-    }, 1000);
+    }
 
-    saveAndRender();
+    function showResponse(message, type) {
+        const responseDiv = document.getElementById('response');
+        responseDiv.innerText = message;
+        responseDiv.className = type;
+        responseDiv.style.display = 'block';
+    }
 </script>
 
 </body>
