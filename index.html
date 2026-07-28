@@ -3,213 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Universal Reminder System</title>
+    <title>AI Reminder Gateway</title>
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --accent: #6366f1;
-            --accent-hover: #4f46e5;
-            --recording: #ef4444;
-        }
-
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            background-color: var(--card-bg);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 450px;
-            text-align: center;
-        }
-
-        h1 { font-size: 1.5rem; margin-bottom: 24px; }
-
-        textarea {
-            width: 100%;
-            height: 100px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            color: white;
-            padding: 12px;
-            box-sizing: border-box;
-            resize: none;
-            font-size: 1rem;
-            margin-bottom: 15px;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 1rem;
-        }
-
-        .btn-submit { background-color: var(--accent); color: white; }
-        .btn-submit:hover { background-color: var(--accent-hover); }
-
-        .btn-voice { background-color: #334155; color: white; }
-        .btn-voice.recording { background-color: var(--recording); animation: pulse 1.5s infinite; }
-
-        .status-box {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            display: none;
-        }
-        .status-success { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
-        .status-loading { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid #6366f1; }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 450px; }
+        h2 { margin-top: 0; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 100px; resize: none; }
+        button { width: 100%; background: #ff6c5f; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #e05b50; }
+        #response { margin-top: 20px; padding: 12px; border-radius: 6px; display: none; font-size: 14px; }
+        .success { background: #e6f4ea; color: #137333; border: 1px solid #ceead6; }
+        .error { background: #fce8e6; color: #c5221f; border: 1px solid #fad2cf; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>⏰ AI Universal Reminder Panel</h1>
+<div class="card">
+    <h2>Create New Reminder</h2>
     
-    <textarea id="textPayload" placeholder="Type your reminder in any language... (e.g., 'Remind me to call the office in 10 minutes' or '10 minute baad paani peene ka yaad dilao')"></textarea>
-    
-    <div class="btn-group">
-        <button type="button" id="voiceBtn" class="btn-voice">🎤 Record Voice</button>
-        <button type="button" id="submitBtn" class="btn-submit">Set Reminder</button>
+    <div class="form-group">
+        <label for="inputType">Input Type</label>
+        <select id="inputType">
+            <option value="text">Text Entry</option>
+            <option value="voice">Voice Transcript</option>
+        </select>
     </div>
 
-    <div id="statusBox" class="status-box"></div>
+    <div class="form-group">
+        <label for="textPayload">Message Content</label>
+        <textarea id="textPayload" placeholder="Type your reminder or paste voice notes..."></textarea>
+    </div>
+
+    <button id="submitBtn" onclick="sendReminder()">Send to Pipeline</button>
+    <div id="response"></div>
 </div>
 
 <script>
-    const WEBHOOK_URL = 'https://primary-production-4c58.up.railway.app/webhook/voice-reminder'; 
-    
-    const textPayload = document.getElementById('textPayload');
-    const voiceBtn = document.getElementById('voiceBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const statusBox = document.getElementById('statusBox');
+    async function sendReminder() {
+        const inputType = document.getElementById('inputType').value;
+        const textPayload = document.getElementById('textPayload').value;
+        const responseDiv = document.getElementById('response');
+        const submitBtn = document.getElementById('submitBtn');
 
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
+        if (!textPayload.trim()) {
+            showResponse('Please enter some content first.', 'error');
+            return;
+        }
 
-    // Show Custom UI Notifications
-    function showStatus(message, type) {
-        statusBox.style.display = 'block';
-        statusBox.textContent = message;
-        statusBox.className = `status-box status-${type}`;
-    }
+        // UI Feedback during request execution
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Processing...';
+        responseDiv.style.display = 'none';
 
-    // --- HANDLE TEXT SUBMISSION ---
-    submitBtn.addEventListener('click', async () => {
-        const text = textPayload.value.trim();
-        if (!text) return alert('Please enter text first!');
-
-        showStatus('Processing your reminder...', 'loading');
+        // REPLACE THIS URL WITH YOUR ACTUAL N8N WEBHOOK TEST/PRODUCTION URL
+        const N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/voice-reminder';
 
         try {
-            const response = await fetch(WEBHOOK_URL, {
+            const response = await fetch(N8N_WEBHOOK_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
-                    inputType: 'text',
-                    textPayload: text
+                    inputType: inputType,
+                    textPayload: textPayload
                 })
             });
 
             if (response.ok) {
-                showStatus('✓ Success! Your background reminder has been set.', 'success');
-                textPayload.value = '';
+                const data = await response.json();
+                showResponse('Success! Automation processed and logged to Discord.', 'success');
+                document.getElementById('textPayload').value = ''; // Clear form
             } else {
-                throw new Error('Server returned an error');
+                showResponse(`Server error status: ${response.status}`, 'error');
             }
-        } catch (err) {
-            showStatus('❌ Failed to set reminder. Check n8n webhook connection.', 'recording');
+        } catch (error) {
+            showResponse(`Network Error: ${error.message}`, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Send to Pipeline';
         }
-    });
+    }
 
-    // --- HANDLE AUDIO RECORDING & MULTIPART VOICE SUBMISSION ---
-    voiceBtn.addEventListener('click', async () => {
-        if (!isRecording) {
-            // Start Recording Voice
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    
-                    // Package as standard Form Data multipart upload for webhooks
-                    const formData = new FormData();
-                    formData.append('inputType', 'voice');
-                    formData.append('audioFile', audioBlob, 'recording.wav');
-
-                    showStatus('Uploading voice note & transcribing language...', 'loading');
-
-                    try {
-                        const response = await fetch(WEBHOOK_URL, {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        if (response.ok) {
-                            showStatus('✓ Success! Voice processed and reminder scheduled.', 'success');
-                        } else {
-                            throw new Error();
-                        }
-                    } catch (e) {
-                        showStatus('❌ Voice upload failed.', 'recording');
-                    }
-                };
-
-                mediaRecorder.start();
-                isRecording = true;
-                voiceBtn.textContent = '🛑 Stop Recording';
-                voiceBtn.classList.add('recording');
-            } catch (err) {
-                alert('Microphone access denied or unsupported by browser.');
-            }
-        } else {
-            // Stop Recording Voice
-            mediaRecorder.stop();
-            // Shut off microphone stream components cleanly
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            isRecording = false;
-            voiceBtn.textContent = '🎤 Record Voice';
-            voiceBtn.classList.remove('recording');
-        }
-    });
+    function showResponse(message, type) {
+        const responseDiv = document.getElementById('response');
+        responseDiv.innerText = message;
+        responseDiv.className = type;
+        responseDiv.style.display = 'block';
+    }
 </script>
 
 </body>
