@@ -1,48 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice & Text Reminder Hub</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --accent-primary: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        
+        .container { background: var(--panel-bg); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 32px; width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin-bottom: 8px; background: linear-gradient(to right, #a5b4fc, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
+        
+        .input-group { position: relative; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 16px 50px 16px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; color: var(--text-main); font-size: 1rem; transition: all 0.3s ease; }
+        input[type="text"]:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 12px var(--accent-glow); }
+        
+        .mic-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); transition: color 0.2s; font-size: 1.3rem; }
+        .mic-btn.recording { color: #ef4444; animation: pulse 1.5s infinite; }
+        
+        .action-btn { width: 100%; padding: 16px; background: var(--accent-primary); border: none; border-radius: 14px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px var(--accent-glow); }
+        .action-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+        .action-btn:disabled { background: #475569; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .status-box { margin-top: 20px; padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 10px; font-size: 0.85rem; border-left: 4px solid #64748b; min-height: 42px; display: flex; align-items: center; color: #cbd5e1; }
+        .status-box.success { border-left-color: #10b981; color: #a7f3d0; }
+        .status-box.error { border-left-color: #ef4444; color: #fca5a5; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Reminder Assistant</h1>
+    <p class="subtitle">Type a task or use voice command controls</p>
+    
+    <div class="input-group">
+        <input type="text" id="textInput" placeholder="e.g., Remind me to call team in 5 minutes">
+        <button class="mic-btn" id="micBtn" title="Hold or click to record voice">🎙️</button>
+    </div>
+    
+    <button class="action-btn" id="submitBtn">Process Reminder</button>
+    <div class="status-box" id="statusBox">System Operational. Ready for input.</div>
+</div>
+
 <script>
-  // Dynamic endpoint switcher based on your current phase (Test vs. Live Production)
-  const N8N_MODE = 'test'; // Change to 'production' when saving/activating the workflow permanently
-  const BASE_URL = 'http://localhost:5678/webhook-test/voice-reminder'; // Replace with your actual n8n instance base URL
-  
-  const webhookUrl = N8N_MODE === 'test' 
-    ? `${BASE_URL}/webhook-test/voice-reminder` 
-    : `${BASE_URL}/webhook/voice-reminder`;
+    // --- PIPELINE URL CONFIGURATION ---
+    // Change N8N_MODE to 'production' when you save and fully activate the workflow in n8n.
+    const N8N_MODE = 'test'; 
+    
+    // Change this to match your structural n8n domain URL completely
+    const N8N_BASE_URL = 'http://localhost:5678/webhook-test/voice-reminder'; 
 
-  // Main function to transmit data to n8n pipelines
-  async function sendReminderPayload(inputType, payloadData) {
-    try {
-      const formData = new FormData();
-      formData.append('inputType', inputType);
+    const targetWebhook = N8N_MODE === 'test' 
+        ? `${N8N_BASE_URL}/webhook-test/voice-reminder` 
+        : `${N8N_BASE_URL}/webhook/voice-reminder`;
 
-      if (inputType === 'text') {
-        formData.append('textPayload', payloadData);
-      } else if (inputType === 'voice') {
-        // payloadData should be the recorded audio Blob object
-        formData.append('audioFile', payloadData, 'recording.webm');
-      }
+    // Elements
+    const textInput = document.getElementById('textInput');
+    const micBtn = document.getElementById('micBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusBox = document.getElementById('statusBox');
 
-      // We explicitly DO NOT set 'Content-Type' header here. 
-      // Letting the browser automatically set the Multi-part Form boundary prevents CORS Preflight blocks.
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'cors', 
-        body: formData
-      });
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
 
-      if (!response.ok) {
-        throw new Error(`Server returned status code ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('🎉 Success: ' + result.message);
-      } else {
-        alert('⚠️ Workflow warning: Pipeline failed to parse metadata.');
-      }
-
-    } catch (error) {
-      console.error('Pipeline Connection Error:', error);
-      alert('Communication Fault: Unable to verify connection stability with n8n server pipelines. Check browser console for explicit error logs.');
+    // Status logger utility
+    function updateStatus(message, type = 'info') {
+        statusBox.textContent = message;
+        statusBox.className = 'status-box';
+        if (type === 'success') statusBox.classList.add('success');
+        if (type === 'error') statusBox.classList.add('error');
     }
-  }
+
+    // --- AUDIO PIPELINE ENGINE ---
+    micBtn.addEventListener('click', async () => {
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                
+                // Adaptive container logic for device cross-compatibility
+                const options = MediaRecorder.isTypeSupported('audio/webm') 
+                    ? { mimeType: 'audio/webm' } 
+                    : { mimeType: 'audio/ogg' };
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: options.mimeType });
+                    updateStatus('Audio capture complete. Shipping payload to pipeline...', 'info');
+                    await dispatchToPipeline('voice', audioBlob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording');
+                updateStatus('Listening... Speak your reminder clearly now.', 'info');
+            } catch (err) {
+                console.error('Audio Setup Failure:', err);
+                updateStatus('Hardware Fault: Mic permission denied or missing.', 'error');
+            }
+        } else {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Clean up hardware stream
+            isRecording = false;
+            micBtn.classList.remove('recording');
+        }
+    });
+
+    // --- MANUAL TEXT SUBMISSION ---
+    submitBtn.addEventListener('click', async () => {
+        const textVal = textInput.value.trim();
+        if (!textVal) {
+            updateStatus('Input Error: Please type a valid command first.', 'error');
+            return;
+        }
+        updateStatus('Sending text instructions to n8n parser...', 'info');
+        await dispatchToPipeline('text', textVal);
+    });
+
+    // --- NETWORK TRANSMISSION LAYER ---
+    async function dispatchToPipeline(type, data) {
+        submitBtn.disabled = true;
+        
+        try {
+            const formData = new FormData();
+            formData.append('inputType', type);
+
+            if (type === 'text') {
+                formData.append('textPayload', data);
+            } else if (type === 'voice') {
+                formData.append('audioFile', data, 'recording.webm');
+            }
+
+            // Explicitly NO Headers block. Browser figures out Content-Type boundary parameters automatically, resolving CORS limits.
+            const response = await fetch(targetWebhook, {
+                method: 'POST',
+                mode: 'cors',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Endpoint returned status code: ${response.status}`);
+            }
+
+            const parsedRes = await response.json();
+            
+            if (parsedRes.success) {
+                updateStatus(`🎉 Success: ${parsedRes.message || 'Reminder successfully tracked!'}`, 'success');
+                if (type === 'text') textInput.value = ''; // Clean field
+            } else {
+                updateStatus('⚠️ Pipeline tracking warning. Internal engine dropped parse parameters.', 'error');
+            }
+
+        } catch (error) {
+            console.error('Pipeline Fault Context:', error);
+            updateStatus('Communication Fault: Connection stability check failed. See developer logs.', 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
 </script>
+
+</body>
+</html>
