@@ -55,16 +55,9 @@
 </div>
 
 <script>
-    // --- PIPELINE URL CONFIGURATION ---
-    // Change N8N_MODE to 'production' when you save and fully activate the workflow in n8n.
-    const N8N_MODE = 'test'; 
-    
-    // Change this to match your structural n8n domain URL completely
-    const N8N_BASE_URL = 'http://localhost:5678/webhook-test/voice-reminder'; 
-
-    const targetWebhook = N8N_MODE === 'test' 
-        ? `${N8N_BASE_URL}/webhook-test/voice-reminder` 
-        : `${N8N_BASE_URL}/webhook/voice-reminder`;
+    // --- EXPLICIT URL DEFINITION ---
+    // Fixes the duplication bug by defining the complete test webhook route natively.
+    const TARGET_WEBHOOK = 'http://localhost:5678/webhook-test/voice-reminder';
 
     // Elements
     const textInput = document.getElementById('textInput');
@@ -91,7 +84,6 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioChunks = [];
                 
-                // Adaptive container logic for device cross-compatibility
                 const options = MediaRecorder.isTypeSupported('audio/webm') 
                     ? { mimeType: 'audio/webm' } 
                     : { mimeType: 'audio/ogg' };
@@ -118,7 +110,7 @@
             }
         } else {
             mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Clean up hardware stream
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
             isRecording = false;
             micBtn.classList.remove('recording');
         }
@@ -149,11 +141,20 @@
                 formData.append('audioFile', data, 'recording.webm');
             }
 
-            // Explicitly NO Headers block. Browser figures out Content-Type boundary parameters automatically, resolving CORS limits.
-            const response = await fetch(targetWebhook, {
+            // Fallback Engine: If loading on public GitHub Pages (https), use an open CORS proxy bridge 
+            // to allow connection to the local unencrypted development webhook (http://localhost) cleanly.
+            let fetchUrl = TARGET_WEBHOOK;
+            if (window.location.protocol === 'https:') {
+                fetchUrl = 'https://cors-anywhere.herokuapp.com/' + TARGET_WEBHOOK;
+            }
+
+            const response = await fetch(fetchUrl, {
                 method: 'POST',
-                mode: 'cors',
-                body: formData
+                body: formData,
+                headers: {
+                    // This header signals the proxy bridge to execute cross-origin tasks cleanly
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
 
             if (!response.ok) {
@@ -164,14 +165,20 @@
             
             if (parsedRes.success) {
                 updateStatus(`🎉 Success: ${parsedRes.message || 'Reminder successfully tracked!'}`, 'success');
-                if (type === 'text') textInput.value = ''; // Clean field
+                if (type === 'text') textInput.value = '';
             } else {
                 updateStatus('⚠️ Pipeline tracking warning. Internal engine dropped parse parameters.', 'error');
             }
 
         } catch (error) {
             console.error('Pipeline Fault Context:', error);
-            updateStatus('Communication Fault: Connection stability check failed. See developer logs.', 'error');
+            
+            // Helpful runtime user prompt if using the third-party proxy fallback for the first time
+            if (window.location.protocol === 'https:') {
+                updateStatus('Proxy Activation Required: Please open https://cors-anywhere.herokuapp.com/corsdemo and click "Request temporary access", then try again!', 'error');
+            } else {
+                updateStatus('Communication Fault: Connection stability check failed. Ensure n8n is running locally.', 'error');
+            }
         } finally {
             submitBtn.disabled = false;
         }
