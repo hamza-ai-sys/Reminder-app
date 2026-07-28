@@ -1,7 +1,7 @@
 <script>
   // Dynamic endpoint switcher based on your current phase (Test vs. Live Production)
   const N8N_MODE = 'test'; // Change to 'production' when saving/activating the workflow permanently
-  const BASE_URL = 'https://hamza-n8n.yourdomain.com'; // Replace with your actual n8n instance base URL
+  const BASE_URL = 'http://localhost:5678/webhook-test/voice-reminder'; // Replace with your actual n8n instance base URL
   
   const webhookUrl = N8N_MODE === 'test' 
     ? `${BASE_URL}/webhook-test/voice-reminder` 
