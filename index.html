@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Reminder App</title>
+    <style>
+        body { background-color: #111827; color: #f9fafb; font-family: sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 16px; box-sizing: border-box; }
+        .card { background-color: #1f2937; padding: 24px; rounded-box: 16px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); w-full: 100%; max-width: 440px; border: 1px solid #374151; box-sizing: border-box; }
+        h1 { font-size: 24px; font-weight: bold; margin-bottom: 24px; text-align: center; color: #818cf8; margin-top: 0; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        input { flex-grow: 1; background-color: #374151; border: 1px solid #4b5563; border-radius: 8px; padding: 8px 12px; color: white; font-size: 14px; outline: none; }
+        input:focus { border-color: #6366f1; }
+        button { border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 14px; }
+        .btn-voice { background-color: #4f46e5; color: white; padding: 8px 16px; white-space: nowrap; }
+        .btn-voice:hover { background-color: #6366f1; }
+        .btn-voice.listening { background-color: #dc2626; }
+        .btn-add { background-color: #059669; color: white; width: 100%; padding: 10px; font-medium: 500; margin-bottom: 24px; }
+        .btn-add:hover { background-color: #10b981; }
+        .presets { margin-bottom: 24px; }
+        .preset-btn { background-color: #374151; color: #d1d5db; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px; margin-bottom: 6px; display: inline-block; }
+        .preset-btn:hover { background-color: #4b5563; }
+        .section-title { font-size: 12px; font-weight: 600; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 12px; }
+        .reminder-item { padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background-color: rgba(55, 65, 81, 0.5); border: 1px solid #4b5563; }
+        .reminder-item.triggered { background-color: rgba(127, 29, 29, 0.4); border-color: #991b1b; }
+        .status-active { color: #a5b4fc; font-family: monospace; font-weight: bold; }
+        .status-triggered { color: #f87171; font-weight: bold; animation: pulse 2s infinite; }
+        .btn-delete { background: none; color: #9ca3af; font-size: 16px; padding: 0 4px; }
+        .btn-delete:hover { color: #f3f4f6; }
+        .log-box { border-top: 1px solid #374151; pt: 16px; margin-top: 16px; padding-top: 16px;}
+        .log-content { background-color: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; font-family: monospace; font-size: 11px; color: #34d399; height: 96px; overflow-y: auto; box-sizing: border-box; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>⏰ Voice Reminders</h1>
+
+        <div class="input-group">
+            <input type="text" id="commandInput" placeholder="Try: Call mom in 10 seconds...">
+            <button id="voiceBtn" class="btn-voice">🎤 <span id="voiceBtnText">Speak</span></button>
+        </div>
+
+        <button id="addBtn" class="btn-add">Schedule Reminder</button>
+
+        <div class="presets">
+            <span style="font-size: 12px; color: #9ca3af; display: block; margin-bottom: 8px;">Quick Testing Presets:</span>
+            <button id="preset1" class="preset-btn">"Water plants in 5 seconds"</button>
+            <button id="preset2" class="preset-btn">"Call boss in 15 seconds"</button>
+        </div>
+
+        <div>
+            <div class="section-title">Active Reminders</div>
+            <div id="remindersContainer">
+                <p id="emptyState" style="font-size: 14px; color: #6b7280; text-align: center; padding: 16px 0; margin: 0;">No reminders set yet.</p>
+            </div>
+        </div>
+
+        <div class="log-box">
+            <span style="font-size: 12px; font-family: monospace; color: #fbbf24; display: block; margin-bottom: 4px;">🔧 System Status Log:</span>
+            <div id="debugLog" class="log-content">
+                <div>App offline engine initialized successfully.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let reminders = [];
+        const commandInput = document.getElementById('commandInput');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const voiceBtnText = document.getElementById('voiceBtnText');
+        const addBtn = document.getElementById('addBtn');
+        const remindersContainer = document.getElementById('remindersContainer');
+        const emptyState = document.getElementById('emptyState');
+        const debugLog = document.getElementById('debugLog');
+
+        function logStatus(msg, isError = false) {
+            const entry = document.createElement('div');
+            if (isError) entry.style.color = '#f87171';
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            debugLog.appendChild(entry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        document.getElementById('preset1').addEventListener('click', () => { commandInput.value = 'Water the plants in 5 seconds'; logStatus('Loaded preset'); });
+        document.getElementById('preset2').addEventListener('click', () => { commandInput.value = 'Call boss in 15 seconds'; logStatus('Loaded preset'); });
+
+        // Offline Natural Language Parsing Engine
+        function parseCommandOffline(text) {
+            let lowerText = text.toLowerCase();
+            let secondsToAdd = 0;
+            let timeMatch = null;
+
+            // Pattern: "in X seconds/minutes/hours"
+            let relativeMatch = lowerText.match(/in\s+(\d+)\s+(second|min|hour)/);
+            
+            if (relativeMatch) {
+                let value = parseInt(relativeMatch[1]);
+                let unit = relativeMatch[2];
+                timeMatch = relativeMatch[0];
+
+                if (unit.startsWith('second')) secondsToAdd = value;
+                else if (unit.startsWith('min')) secondsToAdd = value * 60;
+                else if (unit.startsWith('hour')) secondsToAdd = value * 3600;
+            } 
+            // Pattern: "in X s" (shorthand fallback)
+            else {
+                let shortMatch = lowerText.match(/in\s+(\d+)\s*s/);
+                if (shortMatch) {
+                    secondsToAdd = parseInt(shortMatch[1]);
+                    timeMatch = shortMatch[0];
+                }
+            }
+
+            if (secondsToAdd > 0) {
+                let targetDate = new Date(Date.now() + (secondsToAdd * 1000));
+                let taskTitle = text.replace(new RegExp(timeMatch, 'i'), '').replace(/remind me to/i, '').trim();
+                return {
+                    date: targetDate,
+                    title: taskTitle || "Timer Alert"
+                };
+            }
+            return null;
+        }
+
+        // Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+
+            voiceBtn.addEventListener('click', () => {
+                try { recognition.start(); logStatus('Microphone open...'); } catch(e) { logStatus(`Speech error: ${e.message}`, true); }
+            });
+
+            recognition.onstart = () => {
+                voiceBtn.classList.add('listening');
+                voiceBtnText.innerText = 'Listening...';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                commandInput.value = transcript;
+                logStatus(`Captured: "${transcript}"`);
+            };
+
+            recognition.onerror = (event) => { logStatus(`Mic hardware code: ${event.error}`, true); };
+            recognition.onend = () => {
+                voiceBtn.classList.remove('listening');
+                voiceBtnText.innerText = 'Speak';
+                logStatus('Mic closed.');
+            };
+        } else {
+            logStatus('Speech Recognition not supported in this browser. Use Chrome/Edge.', true);
+        }
+
+        // Add Logic
+        addBtn.addEventListener('click', () => {
+            const text = commandInput.value.trim();
+            if (!text) return;
+
+            const result = parseCommandOffline(text);
+            if (!result) {
+                logStatus("Parsing error: Please state time frames using the 'in X seconds' format.", true);
+                return;
+            }
+
+            const reminder = {
+                id: Date.now(),
+                title: result.title,
+                targetTime: result.date.getTime(),
+                status: 'active'
+            };
+
+            reminders.push(reminder);
+            logStatus(`Set: "${reminder.title}"`);
+            commandInput.value = '';
+            renderReminders();
+        });
+
+        // Built-in Sound Synthesizer (No external assets required)
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch(e) { console.log(e); }
+        }
+
+        function renderReminders() {
+            document.querySelectorAll('.reminder-item').forEach(el => el.remove());
+            if (reminders.length === 0) { emptyState.style.display = 'block'; return; }
+            emptyState.style.display = 'none';
+
+            reminders.forEach(reminder => {
+                const diff = reminder.targetTime - Date.now();
+                const item = document.createElement('div');
+                item.className = `reminder-item ${reminder.status === 'triggered' ? 'triggered' : ''}`;
+
+                let stateDisplay = '';
+                if (reminder.status === 'triggered') {
+                    stateDisplay = `<span class="status-triggered">⏰ Due!</span>`;
+                } else {
+                    stateDisplay = `<span class="status-active">${Math.max(0, Math.ceil(diff / 1000))}s</span>`;
+                }
+
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight:500;color:white;">${reminder.title}</div>
+                        <div style="font-size:11px;color:#9ca3af;">${new Date(reminder.targetTime).toLocaleTimeString()}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        ${stateDisplay}
+                        <button onclick="deleteReminder(${reminder.id})" class="btn-delete">✕</button>
+                    </div>
+                `;
+                remindersContainer.appendChild(item);
+            });
+        }
+
+        window.deleteReminder = function(id) {
+            reminders = reminders.filter(r => r.id !== id);
+            logStatus('Cleared reminder.');
+            renderReminders();
+        };
+
+        setInterval(() => {
+            reminders.forEach(reminder => {
+                if (reminder.status === 'active' && Date.now() >= reminder.targetTime) {
+                    reminder.status = 'triggered';
+                    logStatus(`Fired: "${reminder.title}"`);
+                    playBeep();
+                }
+            });
+            if (reminders.length > 0) renderReminders();
+        }, 1000);
+    </script>
+</body>
+</html>
