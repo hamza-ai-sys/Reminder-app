@@ -1,0 +1,337 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice-reminder",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c2732c60-b489-42dc-99c3-95bb24e90e49",
+      "name": "Webhook Gateway",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        352,
+        192
+      ],
+      "webhookId": "4ea03d3c-f524-402d-ab28-86525530b87d"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.inputType }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "text"
+            },
+            {
+              "value2": "voice",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "id": "3aa8ce5d-4e10-45b2-b437-0319ca7ae10c",
+      "name": "Route Content Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        576,
+        224
+      ],
+      "executeOutputs": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "AI Agent1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "parameters": {},
+      "id": "3066bc09-9c04-45d8-89af-74e281f28d3b",
+      "name": "Merge AI Output",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1088,
+        224
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "67068ed1-3ede-4083-b3c9-9b548cd3e377",
+      "name": "Normalize Values",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        1280,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f541fb0a-f7bd-4c7a-8373-9c0ee5da3270",
+      "name": "Return Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        272
+      ],
+      "id": "3ca27dbb-46c7-4e52-bdb8-38d27b42b6bd",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2HqwG6gpRvwA8fwa",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        624
+      ],
+      "id": "c46d74b7-bd11-42de-8467-c104e5074319",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CV1oKs0aMEX8cuP3",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        368,
+        384
+      ],
+      "id": "771216eb-4159-4f15-910f-0f6119f62b9a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        224
+      ],
+      "id": "a1a3faee-c104-48ba-aee1-b4742d483eb3",
+      "name": "Discord",
+      "webhookId": "1841e2e0-9f99-462f-9d37-b866fbc8da84",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "5z7WHdRWnZfT0jYh",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.textPayload }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        784,
+        96
+      ],
+      "id": "6f776ab5-ba63-41cd-a67f-17de42fe4b66",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.textPayload }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        784,
+        448
+      ],
+      "id": "5babbb6f-2c45-488d-8f97-b4a41e6f46d1",
+      "name": "AI Agent1"
+    }
+  ],
+  "connections": {
+    "Webhook Gateway": {
+      "main": [
+        [
+          {
+            "node": "Route Content Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Content Type": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge AI Output": {
+      "main": [
+        [
+          {
+            "node": "Normalize Values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Values": {
+      "main": [
+        [
+          {
+            "node": "Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Success": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Route Content Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Merge AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "When clicking ‘Execute workflow’": [
+      {
+        "body": {
+          "inputType": "text",
+          "textPayload": "Remind me to call the repair service in 45 minutes"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4c583534abf587e0921ef9123890d50c412107bb50df7a07f4b76290078191a0"
+  }
+}
