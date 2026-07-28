@@ -3,138 +3,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Universal Reminder System</title>
+    <title>AI Universal Voice & Text Reminder Hub</title>
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --accent: #6366f1;
-            --accent-hover: #4f46e5;
-            --recording: #ef4444;
+            --bg-main: #0b0f19;
+            --bg-card: #151d30;
+            --bg-input: #1f2a45;
+            --border-color: #2e3d60;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.3);
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
 
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
             padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
         }
 
-        .container {
-            background-color: var(--card-bg);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        .dashboard-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
             width: 100%;
-            max-width: 450px;
-            text-align: center;
+            max-width: 550px;
+            padding: 35px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
         }
 
-        h1 { font-size: 1.5rem; margin-bottom: 24px; }
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-align: left;
+        }
 
         textarea {
             width: 100%;
-            height: 100px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            color: white;
-            padding: 12px;
-            box-sizing: border-box;
-            resize: none;
+            height: 120px;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            color: var(--text-primary);
+            padding: 16px;
             font-size: 1rem;
-            margin-bottom: 15px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .btn-group {
-            display: flex;
-            gap: 10px;
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-glow);
+        }
+
+        /* Audio Visualizer Layout */
+        .visualizer-container {
+            width: 100%;
+            height: 60px;
+            background-color: var(--bg-main);
+            border-radius: 12px;
             margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed var(--border-color);
+            overflow: hidden;
         }
 
-        button {
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls-wrapper {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .btn {
             flex: 1;
-            padding: 12px;
+            padding: 14px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .btn-submit { background-color: var(--accent); color: white; }
-        .btn-submit:hover { background-color: var(--accent-hover); }
+        .btn-voice {
+            background-color: #22c55e;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+        }
 
-        .btn-voice { background-color: #334155; color: white; }
-        .btn-voice.recording { background-color: var(--recording); animation: pulse 1.5s infinite; }
+        .btn-voice:hover {
+            background-color: #16a34a;
+        }
 
-        .status-box {
-            margin-top: 15px;
+        .btn-voice.recording {
+            background-color: var(--danger);
+            animation: pulseRecord 2s infinite;
+            box-shadow: 0 4px 12px var(--danger-glow);
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .btn-submit:hover {
+            background-color: var(--accent-hover, #4f46e5);
+            transform: translateY(-1px);
+        }
+
+        .btn-submit:disabled, .btn-voice:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Status & Alert Monitor UI */
+        .status-banner {
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+            margin-top: 20px;
+            transform: translateY(10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .status-banner.show {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .status-banner.processing {
+            background-color: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .status-banner.success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 15px var(--success-glow);
+        }
+
+        .status-banner.error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid currentColor;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+        }
+
+        /* History Log Panel */
+        .history-section {
+            margin-top: 35px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 25px;
+            text-align: left;
+        }
+
+        .history-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-list {
+            list-style: none;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
             padding: 12px;
             border-radius: 8px;
-            font-size: 0.95rem;
-            display: none;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .status-success { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
-        .status-loading { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid #6366f1; }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
+        .history-item .timestamp {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
         }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseRecord {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.98); opacity: 0.9; }
+            100% { transform: scale(1); }
+        }
+
+        /* Custom Scrollbar */
+        .history-list::-webkit-scrollbar { width: 6px; }
+        .history-list::-webkit-scrollbar-track { background: var(--bg-main); }
+        .history-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>⏰ AI Universal Reminder Panel</h1>
-    
-    <textarea id="textPayload" placeholder="Type your reminder in any language... (e.g., 'Remind me to call the office in 10 minutes' or '10 minute baad paani peene ka yaad dilao')"></textarea>
-    
-    <div class="btn-group">
-        <button type="button" id="voiceBtn" class="btn-voice">🎤 Record Voice</button>
-        <button type="button" id="submitBtn" class="btn-submit">Set Reminder</button>
+<div class="dashboard-card">
+    <header>
+        <h1><i class="fa-solid fa-bell-ring"></i> AI Reminder Engine</h1>
+        <p>Speak or type in any language—processed automatically by AI</p>
+    </header>
+
+    <div class="input-group">
+        <label class="input-label">Describe Reminder</label>
+        <textarea id="textPayload" placeholder="e.g., Remind me to attend the university presentation in 20 minutes... or type in Urdu/Hindi like '10 minute baad paani peene ka yaad dilao'"></textarea>
     </div>
 
-    <div id="statusBox" class="status-box"></div>
+    <!-- Canvas Audio Visualizer -->
+    <div id="visualizerWrapper" class="visualizer-container">
+        <canvas id="visualizer"></canvas>
+    </div>
+
+    <div class="controls-wrapper">
+        <button type="button" id="voiceBtn" class="btn btn-voice">
+            <i class="fa-solid fa-microphone" id="voiceIcon"></i> <span id="voiceText">Record Voice</span>
+        </button>
+        <button type="button" id="submitBtn" class="btn btn-submit">
+            <i class="fa-solid fa-paper-plane"></i> Set Reminder
+        </button>
+    </div>
+
+    <!-- Reactive Notification Banner -->
+    <div id="statusBanner" class="status-banner">
+        <span id="statusIcon"></span>
+        <span id="statusMessage"></span>
+    </div>
+
+    <!-- Active Local History Dashboard Tracker -->
+    <div class="history-section">
+        <div class="history-title">
+            <i class="fa-solid fa-clock-history"></i> Recent Reminders Logged
+        </div>
+        <ul id="historyList" class="history-list">
+            <!-- Dynamically populated via local state -->
+        </ul>
+    </div>
 </div>
 
 <script>
-    const WEBHOOK_URL = 'https://primary-production-4c58.up.railway.app/webhook/voice-reminder'; 
-    
+    // Configured production deployment gateway string URL mapping
+    const N8N_WEBHOOK_ENDPOINT = 'https://primary-production-4c58.up.railway.app/webhook/voice-reminder';
+
     const textPayload = document.getElementById('textPayload');
     const voiceBtn = document.getElementById('voiceBtn');
+    const voiceIcon = document.getElementById('voiceIcon');
+    const voiceText = document.getElementById('voiceText');
     const submitBtn = document.getElementById('submitBtn');
-    const statusBox = document.getElementById('statusBox');
+    const statusBanner = document.getElementById('statusBanner');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusMessage = document.getElementById('statusMessage');
+    const visualizerWrapper = document.getElementById('visualizerWrapper');
+    const canvas = document.getElementById('visualizer');
+    const canvasCtx = canvas.getContext('2d');
+    const historyList = document.getElementById('historyList');
 
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
+    let audioCtx;
+    let analyser;
+    let dataArray;
+    let bufferLength;
+    let animationFrameId;
 
-    // Show Custom UI Notifications
-    function showStatus(message, type) {
-        statusBox.style.display = 'block';
-        statusBox.textContent = message;
-        statusBox.className = `status-box status-${type}`;
+    // Load initial state log trace array history data map parameters cleanly
+    document.addEventListener('DOMContentLoaded', updateHistoryUI);
+
+    function triggerAlertUI(message, statusType) {
+        statusBanner.className = `status-banner show ${statusType}`;
+        statusMessage.textContent = message;
+
+        if (statusType === 'processing') {
+            statusIcon.innerHTML = '<span class="spinner"></span>';
+            submitBtn.disabled = true;
+            voiceBtn.disabled = true;
+        } else {
+            submitBtn.disabled = false;
+            voiceBtn.disabled = false;
+            if (statusType === 'success') {
+                statusIcon.innerHTML = '<i class="fa-solid fa-circle-check" style="font-size: 1.25rem;"></i>';
+                setTimeout(() => statusBanner.classList.remove('show'), 6000);
+            } else {
+                statusIcon.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="font-size: 1.25rem;"></i>';
+            }
+        }
     }
 
-    // --- HANDLE TEXT SUBMISSION ---
+    // Canvas Visualization Matrix loop array tracing operations
+    function drawVisualizer() {
+        if (!isRecording) return;
+        animationFrameId = requestAnimationFrame(drawVisualizer);
+        analyser.getByteFrequencyData(dataArray);
+
+        canvasCtx.fillStyle = '#0b0f19';
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let barWidth = (canvas.width / bufferLength) * 2.5;
+        let barHeight;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+            barHeight = dataArray[i] / 2;
+            // Adaptive gradient array mapping variables
+            canvasCtx.fillStyle = `rgb(${barHeight + 99}, 102, 241)`;
+            canvasCtx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+            x += barWidth;
+        }
+    }
+
+    function logHistoryItem(description) {
+        let history = JSON.parse(localStorage.getItem('reminder_log')) || [];
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        history.unshift({ description, timestamp });
+        if (history.length > 5) history.pop();
+        localStorage.setItem('reminder_log', JSON.stringify(history));
+        updateHistoryUI();
+    }
+
+    function updateHistoryUI() {
+        let history = JSON.parse(localStorage.getItem('reminder_log')) || [];
+        if (history.length === 0) {
+            historyList.innerHTML = `<li class="history-item" style="color: var(--text-secondary); justify-content: center;">No active reminders scheduled</li>`;
+            return;
+        }
+        historyList.innerHTML = history.map(item => `
+            <li class="history-item">
+                <span>${item.description}</span>
+                <span class="timestamp">${item.timestamp}</span>
+            </li>
+        `).join('');
+    }
+
+    // --- SUBMIT TEXT REMINDER METHOD ---
     submitBtn.addEventListener('click', async () => {
         const text = textPayload.value.trim();
-        if (!text) return alert('Please enter text first!');
+        if (!text) {
+            alert('Please provide a message query string payload description.');
+            return;
+        }
 
-        showStatus('Processing your reminder...', 'loading');
+        triggerAlertUI('Analyzing text parameters and syncing engine...', 'processing');
 
         try {
-            const response = await fetch(WEBHOOK_URL, {
+            const response = await fetch(N8N_WEBHOOK_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -143,71 +467,89 @@
                 })
             });
 
-            if (response.ok) {
-                showStatus('✓ Success! Your background reminder has been set.', 'success');
-                textPayload.value = '';
-            } else {
-                throw new Error('Server returned an error');
-            }
-        } catch (err) {
-            showStatus('❌ Failed to set reminder. Check n8n webhook connection.', 'recording');
+            if (!response.ok) throw new Error('Network boundary execution rejected');
+
+            triggerAlertUI('Success! Background worker task has scheduled your reminder alert.', 'success');
+            logHistoryItem(text.length > 35 ? text.substring(0, 35) + '...' : text);
+            textPayload.value = '';
+        } catch (error) {
+            triggerAlertUI('Connection failed. Verify gateway status details.', 'error');
         }
     });
 
-    // --- HANDLE AUDIO RECORDING & MULTIPART VOICE SUBMISSION ---
+    // --- VOICE RECORDER API HANDLER ---
     voiceBtn.addEventListener('click', async () => {
         if (!isRecording) {
-            // Start Recording Voice
+            // Request permissions and initialize hardware layer array tracing metrics
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Initialize Web Audio API elements for visual rendering engine routines
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaStreamSource(stream);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 64;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                source.connect(analyser);
+
+                canvas.width = visualizerWrapper.offsetWidth;
+                canvas.height = visualizerWrapper.offsetHeight;
+                visualizerWrapper.style.display = 'flex';
+
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
 
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
                 };
 
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     
-                    // Package as standard Form Data multipart upload for webhooks
                     const formData = new FormData();
                     formData.append('inputType', 'voice');
-                    formData.append('audioFile', audioBlob, 'recording.wav');
+                    formData.append('audioFile', audioBlob, 'voice_capture.wav');
 
-                    showStatus('Uploading voice note & transcribing language...', 'loading');
+                    triggerAlertUI('Uploading vocal note stream. Processing multilingual transcription matrix...', 'processing');
 
                     try {
-                        const response = await fetch(WEBHOOK_URL, {
+                        const response = await fetch(N8N_WEBHOOK_ENDPOINT, {
                             method: 'POST',
                             body: formData
                         });
 
-                        if (response.ok) {
-                            showStatus('✓ Success! Voice processed and reminder scheduled.', 'success');
-                        } else {
-                            throw new Error();
-                        }
-                    } catch (e) {
-                        showStatus('❌ Voice upload failed.', 'recording');
+                        if (!response.ok) throw new Error();
+
+                        triggerAlertUI('Success! Voice parsed successfully and reminder scheduled.', 'success');
+                        logHistoryItem('🎤 Voice Reminder Capture');
+                    } catch (err) {
+                        triggerAlertUI('Processing error. Ensure Whisper credential routing rules match.', 'error');
                     }
                 };
 
                 mediaRecorder.start();
                 isRecording = true;
-                voiceBtn.textContent = '🛑 Stop Recording';
+                voiceText.textContent = 'Stop Recording';
+                voiceIcon.className = 'fa-solid fa-circle-stop';
                 voiceBtn.classList.add('recording');
+                drawVisualizer();
+
             } catch (err) {
-                alert('Microphone access denied or unsupported by browser.');
+                alert('Microphone initialization blocked or hardware interface rejected permissions.');
             }
         } else {
-            // Stop Recording Voice
+            // Disengage stream capture configurations cleanly
             mediaRecorder.stop();
-            // Shut off microphone stream components cleanly
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            if (audioCtx) audioCtx.close();
+            cancelAnimationFrame(animationFrameId);
+            
             isRecording = false;
-            voiceBtn.textContent = '🎤 Record Voice';
+            voiceText.textContent = 'Record Voice';
+            voiceIcon.className = 'fa-solid fa-microphone';
             voiceBtn.classList.remove('recording');
+            visualizerWrapper.style.display = 'none';
         }
     });
 </script>
