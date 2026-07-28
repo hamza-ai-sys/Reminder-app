@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Voice & Text Reminder App</title>
+    <title>AI Global Voice Reminder App</title>
     <style>
         body {
             background-color: #121212;
@@ -28,7 +28,7 @@
         .input-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; color: #a3a3a3; font-size: 14px; }
         
-        input[type="text"], input[type="datetime-local"], select {
+        input[type="text"], input[type="password"], input[type="datetime-local"], select {
             width: 100%;
             padding: 10px;
             box-sizing: border-box;
@@ -38,8 +38,6 @@
             color: white;
             font-size: 16px;
         }
-        
-        select { cursor: pointer; }
         
         .btn-row { display: flex; gap: 10px; margin-top: 10px; }
         button {
@@ -54,10 +52,17 @@
         }
         .btn-add { background-color: #2563eb; color: white; }
         .btn-add:hover { background-color: #1d4ed8; }
-        .btn-voice { background-color: #dc2626; color: white; }
+        .btn-voice { background-color: #dc2626; color: white; position: relative; }
         .btn-voice:hover { background-color: #b91c1c; }
+        .btn-voice.recording { background-color: #ef4444; animation: pulse 1.5s infinite; }
         
-        #status { text-align: center; color: #e5e7eb; font-style: italic; margin: 10px 0; min-height: 20px; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        #status { text-align: center; color: #3b82f6; font-style: italic; margin: 10px 0; min-height: 20px; font-weight: 500; }
         
         .reminder-list { margin-top: 25px; }
         .reminder-item {
@@ -79,25 +84,18 @@
 <body>
 
 <div class="container">
-    <h2>⏰ Global Voice Reminder</h2>
+    <h2>⏰ AI Voice Reminder (Multi-Language)</h2>
     
-    <!-- Language Selection Dropdown -->
+    <!-- API Key Input -->
     <div class="input-group">
-        <label for="langSelect">🗣️ Select Your Spoken Language</label>
-        <select id="langSelect">
-            <option value="en-US">English (US)</option>
-            <option value="ur-PK">اردو (Pakistan)</option>
-            <option value="hi-IN">हिन्दी (India)</option>
-            <option value="ar-SA">العربية (Saudi Arabia)</option>
-            <option value="es-ES">Español (España)</option>
-            <option value="zh-CN">中文 (简体)</option>
-        </select>
+        <label for="apiKeyInput">🔑 Enter Gemini API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
     </div>
 
     <!-- Text Input Form -->
     <div class="input-group">
-        <label for="taskInput">What do you want to be reminded of?</label>
-        <input type="text" id="taskInput" placeholder="Type here or use the microphone button...">
+        <label for="taskInput">Reminder Command</label>
+        <input type="text" id="taskInput" placeholder="Type or click Speak to record in any language...">
     </div>
     
     <div class="input-group">
@@ -107,7 +105,7 @@
     
     <div class="btn-row">
         <button class="btn-add" id="addBtn">Save Reminder</button>
-        <button class="btn-voice" id="voiceBtn">🎙️ Speak Input</button>
+        <button class="btn-voice" id="voiceBtn">🎙️ Speak (Click to Start/Stop)</button>
     </div>
     
     <p id="status"></p>
@@ -119,23 +117,32 @@
     </div>
 </div>
 
-<script>
+<script type="module">
+    // Import Google Gen AI Library directly in the browser
+    import { GoogleGenAI } from 'https://esm.run/@google/genai';
+
     const taskInput = document.getElementById('taskInput');
     const timeInput = document.getElementById('timeInput');
-    const langSelect = document.getElementById('langSelect');
+    const apiKeyInput = document.getElementById('apiKeyInput');
     const addBtn = document.getElementById('addBtn');
     const voiceBtn = document.getElementById('voiceBtn');
     const status = document.getElementById('status');
     const remindersDiv = document.getElementById('remindersDiv');
 
-    let reminders = JSON.parse(localStorage.getItem('global_reminders')) || [];
+    let reminders = JSON.parse(localStorage.getItem('ai_reminders')) || [];
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
 
-    // Ensure desktop notifications are permitted
+    // Load saved API key if available
+    if (localStorage.getItem('gemini_api_key')) {
+        apiKeyInput.value = localStorage.getItem('gemini_api_key');
+    }
+
     if (Notification.permission !== "granted") {
         Notification.requestPermission();
     }
 
-    // Set default target execution window to +5 mins
     function setDefaultTime() {
         const now = new Date();
         now.setMinutes(now.getMinutes() + 5);
@@ -144,46 +151,104 @@
     }
     setDefaultTime();
 
-    // Native Speech API Configuration Hook
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        
-        // Fired instantly when microphone is triggered
-        voiceBtn.addEventListener('click', () => {
-            // Bind the active profile to whatever language is selected right now
-            recognition.lang = langSelect.value; 
-            recognition.start();
-            status.innerText = "Listening closely... Speak your command.";
-        });
+    // Native High-Fidelity Audio Recording Framework
+    voiceBtn.addEventListener('click', async () => {
+        const apiKey = apiKeyInput.value.trim();
+        if (!apiKey) {
+            alert("Please enter a valid Gemini API key first.");
+            return;
+        }
+        localStorage.setItem('gemini_api_key', apiKey);
 
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            taskInput.value = transcript;
-            status.innerText = "Speech captured successfully!";
-        };
+        if (!isRecording) {
+            // Start Audio capture
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
 
-        recognition.onerror = (e) => { 
-            status.innerText = "Listening failed. Make sure microphone permissions are granted."; 
-            console.error(e);
-        };
-    } else {
-        voiceBtn.innerHTML = "🎙️ Mic Not Supported";
-        voiceBtn.disabled = true;
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    status.innerText = "Processing audio with AI Engine...";
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await processAudioWithGemini(audioBlob, apiKey);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                voiceBtn.innerText = "🛑 Stop Recording";
+                status.innerText = "Listening closely... Speak now (Urdu, English, etc.)";
+            } catch (err) {
+                status.innerText = "Microphone access denied.";
+                console.error(err);
+            }
+        } else {
+            // Stop Audio capture
+            mediaRecorder.stop();
+            // Stop all tracks on the stream to release mic access hardware
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            isRecording = false;
+            voiceBtn.classList.remove('recording');
+            voiceBtn.innerText = "🎙️ Speak (Click to Start/Stop)";
+        }
+    });
+
+    // Send Audio payload directly to Gemini API
+    async function processAudioWithGemini(audioBlob, apiKey) {
+        try {
+            // Convert blob file payload to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64Audio = reader.result.split(',')[1];
+
+                const ai = new GoogleGenAI({ apiKey: apiKey });
+                
+                // Call gemini-2.5-flash with the raw audio signature data input
+                const response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: [
+                        {
+                            role: 'user',
+                            parts: [
+                                {
+                                    inlineData: {
+                                        mimeType: 'audio/webm',
+                                        data: base64Audio
+                                    }
+                                },
+                                {
+                                    text: "Listen to this audio file carefully. Transcribe the spoken text accurately into its native text format. If spoken in Urdu, output the text in Urdu script. Return ONLY the transcribed text translation with no conversational responses."
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                taskInput.value = response.text.trim();
+                status.innerText = "Speech captured accurately!";
+            };
+        } catch (error) {
+            status.innerText = "AI processing failed.";
+            console.error(error);
+        }
     }
 
-    // Action Execution: Save to persistence profile
+    // Save Reminder Schedule
     addBtn.addEventListener('click', () => {
         const text = taskInput.value.trim();
         const targetTime = new Date(timeInput.value).getTime();
 
         if (!text) {
-            alert("Please type or speak a reminder message first.");
+            alert("Please type or speak a reminder description first.");
             return;
         }
         if (isNaN(targetTime) || targetTime <= Date.now()) {
-            alert("Please select a valid date/time in the future.");
+            alert("Please choose a valid time in the future.");
             return;
         }
 
@@ -198,7 +263,7 @@
         saveAndRender();
         taskInput.value = "";
         setDefaultTime();
-        status.innerText = "Reminder locked into schedule!";
+        status.innerText = "Reminder locked into timeline!";
     });
 
     window.deleteReminder = (id) => {
@@ -207,12 +272,12 @@
     };
 
     function saveAndRender() {
-        localStorage.setItem('global_reminders', JSON.stringify(reminders));
+        localStorage.setItem('ai_reminders', JSON.stringify(reminders));
         reminders.sort((a, b) => a.triggerAt - b.triggerAt);
         
         remindersDiv.innerHTML = "";
         if (reminders.length === 0) {
-            remindersDiv.innerHTML = '<p style="color:#666; text-align:center;">No pending reminders.</p>';
+            remindersDiv.innerHTML = '<p style="color:#666; text-align:center;">No active reminders set.</p>';
             return;
         }
 
@@ -223,7 +288,7 @@
             div.innerHTML = `
                 <div>
                     <div class="task-text">${r.task}</div>
-                    <div class="task-time">📅 ${timeString} ${r.triggered ? '(Triggered)' : ''}</div>
+                    <div class="task-time">📅 ${timeString} ${r.triggered ? '(Done)' : ''}</div>
                 </div>
                 <button class="btn-delete" onclick="deleteReminder(${r.id})">🗑️</button>
             `;
@@ -231,38 +296,38 @@
         });
     }
 
-    // Internal polling loop - evaluates parameters every 1 second
+    // Polling Engine (Evaluates timestamp schedules every 1 second)
     setInterval(() => {
-        let stateChanged = false;
+        let changed = false;
         const now = Date.now();
 
         reminders.forEach(r => {
             if (!r.triggered && now >= r.triggerAt) {
                 r.triggered = true;
-                stateChanged = true;
+                changed = true;
 
-                // Sound Alert Tone
+                // Tone Generator Alert
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioCtx.createOscillator();
                 oscillator.type = 'sine';
                 oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
                 oscillator.connect(audioCtx.destination);
                 oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 1.2); 
+                oscillator.stop(audioCtx.currentTime + 1.5); 
 
-                // Window Alert Notification Card
+                // OS Banner Alert Window
                 if (Notification.permission === "granted") {
-                    new Notification("⏰ Reminder Alert!", {
+                    new Notification("⏰ AI Reminder Alert!", {
                         body: r.task,
                         icon: "https://cdn-icons-png.flaticon.com/512/3602/3602145.png"
                     });
                 } else {
-                    alert(`🔔 ALERT: ${r.task}`);
+                    alert(`🚨 REMINDER: ${r.task}`);
                 }
             }
         });
 
-        if (stateChanged) {
+        if (changed) {
             saveAndRender();
         }
     }, 1000);
