@@ -56,7 +56,6 @@
 
 <script>
     // --- EXPLICIT URL DEFINITION ---
-    // Fixes the duplication bug by defining the complete test webhook route natively.
     const TARGET_WEBHOOK = 'http://localhost:5678/webhook-test/voice-reminder';
 
     // Elements
@@ -141,21 +140,27 @@
                 formData.append('audioFile', data, 'recording.webm');
             }
 
-            // Fallback Engine: If loading on public GitHub Pages (https), use an open CORS proxy bridge 
-            // to allow connection to the local unencrypted development webhook (http://localhost) cleanly.
             let fetchUrl = TARGET_WEBHOOK;
-            if (window.location.protocol === 'https:') {
+            const isHttps = window.location.protocol === 'https:';
+            
+            if (isHttps) {
                 fetchUrl = 'https://cors-anywhere.herokuapp.com/' + TARGET_WEBHOOK;
             }
 
-            const response = await fetch(fetchUrl, {
+            // Build request options dynamically
+            const fetchOptions = {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    // This header signals the proxy bridge to execute cross-origin tasks cleanly
+                body: formData
+            };
+
+            // Only append custom header if routing through the proxy bridge to prevent preflight local failures
+            if (isHttps) {
+                fetchOptions.headers = {
                     'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+                };
+            }
+
+            const response = await fetch(fetchUrl, fetchOptions);
 
             if (!response.ok) {
                 throw new Error(`Endpoint returned status code: ${response.status}`);
@@ -173,11 +178,13 @@
         } catch (error) {
             console.error('Pipeline Fault Context:', error);
             
-            // Helpful runtime user prompt if using the third-party proxy fallback for the first time
-            if (window.location.protocol === 'https:') {
-                updateStatus('Proxy Activation Required: Please open https://cors-anywhere.herokuapp.com/corsdemo and click "Request temporary access", then try again!', 'error');
-            } else {
-                updateStatus('Communication Fault: Connection stability check failed. Ensure n8n is running locally.', 'error');
+            // Helpful message showing you the exact breaking error parameter
+            updateStatus(`Execution Error: ${error.message}`, 'error');
+            
+            if (window.location.protocol === 'https:' && error.message.includes('Failed to fetch')) {
+                setTimeout(() => {
+                    updateStatus('Proxy Activation Required: Please open https://cors-anywhere.herokuapp.com/corsdemo and click "Request temporary access"!', 'error');
+                }, 4000);
             }
         } finally {
             submitBtn.disabled = false;
