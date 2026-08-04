@@ -3,194 +3,1219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Voice & Text Reminder Hub</title>
+    <title>Workspace App - Production Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            --panel-bg: rgba(30, 41, 59, 0.7);
-            --accent-primary: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.4);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        
-        .container { background: var(--panel-bg); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 32px; width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin-bottom: 8px; background: linear-gradient(to right, #a5b4fc, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
-        
-        .input-group { position: relative; margin-bottom: 20px; }
-        input[type="text"] { width: 100%; padding: 16px 50px 16px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; color: var(--text-main); font-size: 1rem; transition: all 0.3s ease; }
-        input[type="text"]:focus { outline: none; border-color: var(--accent-primary); box-shadow: 0 0 12px var(--accent-glow); }
-        
-        .mic-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); transition: color 0.2s; font-size: 1.3rem; }
-        .mic-btn.recording { color: #ef4444; animation: pulse 1.5s infinite; }
-        
-        .action-btn { width: 100%; padding: 16px; background: var(--accent-primary); border: none; border-radius: 14px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px var(--accent-glow); }
-        .action-btn:hover { background: #4f46e5; transform: translateY(-1px); }
-        .action-btn:disabled { background: #475569; cursor: not-allowed; transform: none; box-shadow: none; }
-        
-        .status-box { margin-top: 20px; padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 10px; font-size: 0.85rem; border-left: 4px solid #64748b; min-height: 42px; display: flex; align-items: center; color: #cbd5e1; }
-        .status-box.success { border-left-color: #10b981; color: #a7f3d0; }
-        .status-box.error { border-left-color: #ef4444; color: #fca5a5; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        .toast-enter { animation: slideIn 0.3s ease forwards; }
+        .toast-exit  { animation: slideOut 0.3s ease forwards; }
     </style>
 </head>
-<body>
+<body class="bg-slate-300 min-h-screen flex items-center justify-center p-0 sm:p-4 md:p-8">
 
-<div class="container">
-    <h1>AI Reminder Assistant</h1>
-    <p class="subtitle">Type a task or use voice command controls</p>
-    
-    <div class="input-group">
-        <input type="text" id="textInput" placeholder="e.g., Remind me to call team in 5 minutes">
-        <button class="mic-btn" id="micBtn" title="Hold or click to record voice">🎙️</button>
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none"></div>
+
+    <div class="w-full max-w-[1280px] bg-[#f1f5f9] rounded-none sm:rounded-2xl shadow-2xl flex overflow-hidden min-h-[820px] border border-slate-200 text-slate-700 relative">
+
+        <!-- DESKTOP SIDEBAR -->
+        <aside id="sidebarDesktop" class="w-60 bg-white flex flex-col justify-between shrink-0 border-r border-slate-200 hidden lg:flex">
+            <div class="flex flex-col h-full justify-between">
+                <div>
+                    <div class="bg-gradient-to-b from-[#1e5eb8] to-[#0a3f8a] h-36 flex flex-col items-center justify-center text-white gap-2">
+                        <div class="w-11 h-11 rounded-full border border-white/30 bg-white/10 flex items-center justify-center shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                        <span class="text-xs font-semibold tracking-wider opacity-90">Workspace App</span>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">Menu</p>
+                        <nav class="space-y-1 text-xs font-semibold menu-nav-container"></nav>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-slate-100">
+                    <button onclick="handleLogOut()" class="w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-red-600 transition text-left cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                        Reset System Session
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MOBILE SIDEBAR -->
+        <div id="sidebarMobileBackdrop" class="fixed inset-0 bg-slate-900/40 z-40 hidden transition-opacity duration-300 backdrop-blur-sm"></div>
+        <aside id="sidebarMobile" class="fixed top-0 bottom-0 left-0 w-64 bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between border-r border-slate-200">
+            <div>
+                <div class="bg-gradient-to-b from-[#1e5eb8] to-[#0a3f8a] h-32 flex flex-col items-center justify-center text-white gap-1 relative">
+                    <button onclick="toggleMobileMenu()" class="absolute top-4 right-4 text-white/70 hover:text-white cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    <span class="text-xs font-bold tracking-wider">Workspace App</span>
+                </div>
+                <div class="p-4">
+                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">Menu</p>
+                    <nav class="space-y-1 text-xs font-semibold menu-nav-container-mobile"></nav>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100">
+                <button onclick="handleLogOut()" class="w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-red-600 transition text-left cursor-pointer">Reset System Session</button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between shrink-0 z-30">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleMobileMenu()" class="lg:hidden p-1 text-slate-500 hover:text-slate-800 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+                    </button>
+                    <h2 id="viewTitle" class="text-sm font-bold text-slate-800">Dashboard Overview</h2>
+                    <span id="liveClock" class="hidden sm:inline text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-mono font-medium ml-2">00:00:00</span>
+                </div>
+                <div class="flex items-center gap-4 sm:gap-6">
+                    <div class="relative w-40 sm:w-48 md:w-64">
+                        <input type="text" id="globalSearch" placeholder="Filter log entries..." class="w-full bg-[#f8fafc] border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-slate-400">
+                        <svg class="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </div>
+                    <button onclick="toggleNotificationBadge()" class="relative flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        <span class="hidden md:inline">Alerts</span>
+                        <span id="notifBadge" class="absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[9px] px-1 rounded-full font-bold transition-all duration-200">3</span>
+                    </button>
+                    <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span id="userNameHeader" class="hidden md:inline text-slate-800">User</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-4 sm:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+
+                <!-- VIEW: DASHBOARD -->
+                <div id="view-dashboard" class="view-panel space-y-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-slate-900 tracking-tight">Welcome back, <span id="welcomeName" class="text-indigo-600">User</span></h3>
+                        <p class="text-xs font-medium text-slate-400 mt-0.5">Here's what's happening today</p>
+                    </div>
+
+                    <!-- KPI CARDS -->
+                    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[105px]">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Tasks</p>
+                            <p id="kpi-projects" class="text-3xl font-bold text-slate-900 leading-none my-1">0</p>
+                            <p class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-1">Currently Pending</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[105px]">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Scheduled</p>
+                            <p id="kpi-team" class="text-3xl font-bold text-slate-900 leading-none my-1">0</p>
+                            <p class="text-[10px] font-semibold text-slate-400 mt-1">Meetings Registered</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[105px]">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tasks Archived</p>
+                            <p id="kpi-tasks" class="text-3xl font-bold text-slate-900 leading-none my-1">0</p>
+                            <p class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-1">Completed States</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between min-h-[105px]">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Success Rate</p>
+                            <p id="kpi-productivity" class="text-3xl font-bold text-slate-900 leading-none my-1">0%</p>
+                            <p class="text-[10px] font-semibold text-slate-400 mt-1">Efficiency · <span id="kpi-overdue" class="text-red-500 font-bold">0 overdue</span></p>
+                        </div>
+                    </section>
+
+                    <!-- STATISTICS ROW -->
+                    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 text-center">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Set Today</p>
+                            <p id="stat-today" class="text-2xl font-bold text-indigo-600">0</p>
+                        </div>
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 text-center">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Completed</p>
+                            <p id="stat-completed" class="text-2xl font-bold text-emerald-600">0</p>
+                        </div>
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 text-center">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Missed</p>
+                            <p id="stat-missed" class="text-2xl font-bold text-red-500">0</p>
+                        </div>
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 text-center">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">On-time Rate</p>
+                            <p id="stat-ontime" class="text-2xl font-bold text-slate-800">—</p>
+                        </div>
+                    </section>
+
+                    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 lg:col-span-2 flex flex-col justify-between h-[340px]">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-xs font-bold text-slate-800 tracking-wide uppercase">Weekly Activity Tracking</h4>
+                                <span class="text-[10px] text-slate-400 font-medium">Auto-compiled via logs data</span>
+                            </div>
+                            <div class="relative flex-1 w-full flex items-center justify-center">
+                                <canvas id="activityChart" class="w-full h-full max-h-[260px]"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6 lg:col-span-1">
+                            <!-- AI INTERFACE -->
+                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+                                <h4 class="text-xs font-bold text-slate-800 tracking-wide flex items-center gap-1.5 uppercase">
+                                    <span id="pulseIndicator" class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                                    AI Interface Stream
+                                </h4>
+                                <div class="relative">
+                                    <input type="text" id="textInput" placeholder="Enter standard message context..." class="w-full bg-[#f8fafc] border border-slate-200 rounded-lg pl-3 pr-10 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500">
+                                    <button id="micBtn" class="absolute right-2 top-2 p-1 text-slate-400 hover:text-red-500 transition cursor-pointer" title="Record Audio Segment">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                                    </button>
+                                </div>
+                                <button id="submitBtn" class="w-full bg-[#1e5eb8] hover:bg-[#15468a] text-white py-2 rounded-lg text-[11px] font-bold tracking-wide shadow-sm transition cursor-pointer">Dispatch Intention Request</button>
+                                <div id="statusBox" class="text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 p-2 rounded text-center">Engine operational. Ready for instructions.</div>
+                                <!-- QUIET HOURS INDICATOR -->
+                                <div id="quietHoursBar" class="hidden bg-purple-50 border border-purple-200 rounded p-2 flex items-center gap-2">
+                                    <span class="text-purple-500 text-xs">🌙</span>
+                                    <p class="text-[10px] font-semibold text-purple-700">Quiet hours active — reminders delayed to <span id="quietHoursEnd">07:00</span></p>
+                                </div>
+                            </div>
+
+                            <!-- MEETINGS -->
+                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-2.5">
+                                <div class="flex justify-between items-center">
+                                    <h4 class="text-xs font-bold text-slate-800 tracking-wide uppercase">Upcoming Meetings</h4>
+                                    <button onclick="openModal('meetingModal')" class="text-[10px] bg-slate-100 text-blue-600 px-2 py-0.5 rounded font-bold hover:bg-blue-50 cursor-pointer">+ New Event</button>
+                                </div>
+                                <div class="space-y-1.5 text-xs text-slate-600 custom-scrollbar max-h-[140px] overflow-y-auto pr-1" id="meetingsContainer"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ACTIVITY LOG TABLE -->
+                    <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                            <h4 class="text-xs font-bold text-slate-800 tracking-wide uppercase">Real-time Activity Register</h4>
+                            <div class="flex items-center gap-2">
+                                <button onclick="exportLogsToJSON()" class="text-[10px] text-slate-500 hover:text-slate-800 font-semibold border border-slate-200 px-2 py-0.5 rounded bg-slate-50">Export Stack JSON</button>
+                                <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded" id="logCounter">0 Entries</span>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse min-w-[620px]">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-100 bg-slate-50/50 font-bold uppercase tracking-wider text-[10px]">
+                                        <th class="py-2.5 px-4">User Handle</th>
+                                        <th class="py-2.5 px-4">Execution Action Log</th>
+                                        <th class="py-2.5 px-4">Scheduled For</th>
+                                        <th class="py-2.5 px-4">Status Code</th>
+                                        <th class="py-2.5 px-4 text-center">Controls</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody" class="divide-y divide-slate-100 font-medium text-slate-600"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- VIEW: LOGS ENGINE -->
+                <div id="view-projects" class="view-panel hidden space-y-4">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800">Dynamic Logging Console</h3>
+                                <p class="text-xs text-slate-400">Append custom parameters directly to the system log matrix.</p>
+                            </div>
+                            <button onclick="openModal('logModal')" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-indigo-700 cursor-pointer">+ Append New Custom Entry</button>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg text-xs text-slate-500 border border-slate-200">Use this administrative utility interface zone to simulate manual project structural entries, debug processing status markers, and manage your dynamic records directly.</div>
+                    </div>
+                </div>
+
+                <!-- VIEW: HISTORY -->
+                <div id="view-history" class="view-panel hidden space-y-4">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800">Reminder History</h3>
+                                <p class="text-xs text-slate-400">All completed and missed reminders from your session.</p>
+                            </div>
+                            <button onclick="clearHistory()" class="text-[10px] text-red-500 hover:text-red-700 font-bold border border-red-200 px-2 py-1 rounded bg-red-50 cursor-pointer">Clear History</button>
+                        </div>
+                        <div id="historyContainer" class="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar"></div>
+                    </div>
+                </div>
+
+                <!-- VIEW: MESSAGES -->
+                <div id="view-messages" class="view-panel hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Communication Hub</h3>
+                    <div class="border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400 font-medium rounded-lg">Operational network pipes inactive. No incoming messaging packages recorded.</div>
+                </div>
+
+                <!-- VIEW: CALENDAR -->
+                <div id="view-calendar" class="view-panel hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">System Schedule Chronometer</h3>
+                    <div class="border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400 font-medium rounded-lg">Cron sequencing engines are executing in background contexts cleanly.</div>
+                </div>
+
+                <!-- VIEW: ANALYTICS -->
+                <div id="view-analytics" class="view-panel hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Analytical Metric Parsing Matrix</h3>
+                    <div class="border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400 font-medium rounded-lg">Statistical telemetry compiling layers active. Navigation states nominal.</div>
+                </div>
+
+                <!-- VIEW: SETTINGS -->
+                <div id="view-settings" class="view-panel hidden bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Application Workspace Configurations</h3>
+                        <p class="text-xs text-slate-400">Modify client metadata values stored directly inside user context layers.</p>
+                    </div>
+                    <hr class="border-slate-100">
+                    <div class="max-w-md space-y-5">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">Account User Handle Name</label>
+                            <input type="text" id="usernameSettingInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500" placeholder="Type new username string...">
+                            <button onclick="updateProfileHandle()" class="bg-[#1e5eb8] text-white px-4 py-2 rounded-lg text-xs font-bold cursor-pointer hover:bg-[#15468a] shadow-sm transition">Save Username</button>
+                        </div>
+                        <hr class="border-slate-100">
+                        <!-- QUIET HOURS -->
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">🌙 Quiet Hours</label>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">No reminders will fire during this window</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="quietHoursToggle" class="sr-only peer" onchange="saveQuietHours()">
+                                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Start Time</label>
+                                    <input type="time" id="quietStart" value="23:00" onchange="saveQuietHours()" class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">End Time</label>
+                                    <input type="time" id="quietEnd" value="07:00" onchange="saveQuietHours()" class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500">
+                                </div>
+                            </div>
+                            <div id="quietHoursStatus" class="text-[10px] text-slate-400 font-medium"></div>
+                        </div>
+                        <hr class="border-slate-100">
+                        <!-- PUSH NOTIFICATIONS -->
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">🔔 Browser Push Notifications</label>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Get OS-level alerts when reminders fire</p>
+                            </div>
+                            <button onclick="requestPushPermission()" id="pushPermBtn" class="text-[10px] bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold border border-indigo-200 px-3 py-1.5 rounded cursor-pointer transition">Enable</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
     </div>
-    
-    <button class="action-btn" id="submitBtn">Process Reminder</button>
-    <div class="status-box" id="statusBox">System Operational. Ready for input.</div>
-</div>
 
-<script>
-    // --- EXPLICIT URL DEFINITION ---
-    const TARGET_WEBHOOK = 'http://localhost:5678/webhook-test/voice-reminder';
+    <!-- MODAL: MEETING -->
+    <div id="meetingModal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 hidden backdrop-blur-xs">
+        <div class="bg-white rounded-xl border border-slate-200 w-full max-w-sm shadow-2xl overflow-hidden">
+            <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Register Meeting Element</span>
+                <button onclick="closeModal('meetingModal')" class="text-slate-400 hover:text-slate-600 cursor-pointer">&times;</button>
+            </div>
+            <form class="p-4 space-y-3" onsubmit="handleMeetingSubmit(event)">
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Event Target Heading</label>
+                    <input type="text" id="m_text" required class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500" placeholder="e.g., Database Core Review Sync">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Trigger Time Frame</label>
+                    <input type="time" id="m_time" required class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('meetingModal')" class="flex-1 border border-slate-200 rounded text-xs font-semibold py-2 text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white rounded text-xs font-semibold py-2 hover:bg-indigo-700 cursor-pointer">Commit to Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    // Elements
-    const textInput = document.getElementById('textInput');
-    const micBtn = document.getElementById('micBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const statusBox = document.getElementById('statusBox');
+    <!-- MODAL: LOG -->
+    <div id="logModal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 hidden backdrop-blur-xs">
+        <div class="bg-white rounded-xl border border-slate-200 w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Append Transaction Activity Record</span>
+                <button onclick="closeModal('logModal')" class="text-slate-400 hover:text-slate-600 cursor-pointer">&times;</button>
+            </div>
+            <form class="p-4 space-y-3" onsubmit="handleManualLogSubmit(event)">
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Operator Target Persona Handle</label>
+                    <input type="text" id="l_name" required class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500" placeholder="e.g., System Agent Core">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Operational Descriptive Action Log String</label>
+                    <input type="text" id="l_action" required class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500" placeholder="e.g., verified index mapping constraints">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Target Initialization Status Mode</label>
+                    <select id="l_status" class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-slate-700 focus:outline-none focus:border-indigo-500">
+                        <option value="Active">Active Running State</option>
+                        <option value="Pending">Pending Queue Block</option>
+                        <option value="Completed">Completed Validation State</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('logModal')" class="flex-1 border border-slate-200 rounded text-xs font-semibold py-2 text-slate-500 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white rounded text-xs font-semibold py-2 hover:bg-indigo-700 cursor-pointer">Inject Log Node</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
+    <!-- PREVIEW / RESULT MODAL -->
+    <div id="previewModal" class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-xl border border-slate-200 w-full max-w-sm shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-[#1e5eb8] to-[#0a3f8a] px-4 py-3 flex justify-between items-center">
+                <span id="previewModalTitle" class="text-xs font-bold text-white uppercase tracking-wider">Confirm Reminder</span>
+                <button onclick="closePreviewModal()" class="text-white/70 hover:text-white cursor-pointer text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="bg-slate-50 rounded-lg border border-slate-200 p-4 space-y-3">
+                    <div class="flex items-start gap-3">
+                        <span class="text-base mt-0.5 shrink-0">🔔</span>
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reminder Task</p>
+                            <p id="previewTask" class="text-sm font-bold text-slate-800 leading-snug break-words">-</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-base mt-0.5 shrink-0">⏰</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scheduled For</p>
+                            <p id="previewTime" class="text-sm font-bold text-indigo-600">-</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-base mt-0.5 shrink-0">📅</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</p>
+                            <p id="previewDate" class="text-sm font-semibold text-slate-700">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="previewWarning" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                    <span class="text-amber-500 shrink-0">⚠️</span>
+                    <p class="text-[11px] font-semibold text-amber-700">This time appears to be in the past. Please verify.</p>
+                </div>
+                <div id="previewQuietWarning" class="hidden bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center gap-2">
+                    <span class="text-purple-500 shrink-0">🌙</span>
+                    <p class="text-[11px] font-semibold text-purple-700" id="previewQuietMsg">This reminder falls in quiet hours and will be delayed.</p>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Input</p>
+                    <p id="previewInputText" class="text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100 break-words"></p>
+                </div>
+                <div id="previewBtns" class="flex gap-2 pt-1"></div>
+            </div>
+        </div>
+    </div>
 
-    // Status logger utility
-    function updateStatus(message, type = 'info') {
-        statusBox.textContent = message;
-        statusBox.className = 'status-box';
-        if (type === 'success') statusBox.classList.add('success');
-        if (type === 'error') statusBox.classList.add('error');
-    }
+    <script>
+        // ═══════════════════════════════════════════════
+        // CONFIG
+        // ═══════════════════════════════════════════════
+        const WEBHOOK_ENDPOINT = 'http://localhost:5678/webhook-test/voice-reminder';
 
-    // --- AUDIO PIPELINE ENGINE ---
-    micBtn.addEventListener('click', async () => {
-        if (!isRecording) {
+        // ═══════════════════════════════════════════════
+        // SIDEBAR
+        // ═══════════════════════════════════════════════
+        const SIDEBAR_ITEMS = [
+            { target: "dashboard", label: "Dashboard",   svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
+            { target: "projects",  label: "Logs Engine", svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
+            { target: "history",   label: "History",     svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+            { target: "messages",  label: "Messages",    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+            { target: "calendar",  label: "Calendar",    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>' },
+            { target: "analytics", label: "Analytics",   svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>' },
+            { target: "settings",  label: "Settings",    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' }
+        ];
+
+        // ═══════════════════════════════════════════════
+        // SEED DATA
+        // ═══════════════════════════════════════════════
+        const DEFAULT_SEED_LOGS = [
+            { id: 101, name: "John.D",    action: "Refined tailwind element alignment variables",           time: "10 mins ago", status: "Completed", scheduledFor: null, createdAt: null },
+            { id: 102, name: "Sarah.K",   action: "Pushed raw structural updates to main branch logs",      time: "24 mins ago", status: "Pending",   scheduledFor: null, createdAt: null },
+            { id: 103, name: "Michael.V", action: "Fixed configuration file parse schema issues",           time: "1 hour ago",  status: "Completed", scheduledFor: null, createdAt: null },
+            { id: 104, name: "Emma.W",    action: "Instantiated secondary environment workspaces pipeline", time: "2 hours ago", status: "Active",    scheduledFor: null, createdAt: null }
+        ];
+        const DEFAULT_SEED_MEETINGS = [
+            { id: 201, time: "10:00", text: "UI Layout Cross-Check Sync" },
+            { id: 202, time: "13:00", text: "Upstream API Validation Call" },
+            { id: 203, time: "16:00", text: "Productive Retro Standup" }
+        ];
+
+        // ═══════════════════════════════════════════════
+        // APP STATE
+        // ═══════════════════════════════════════════════
+        let appState = {
+            profile:          { name: "User" },
+            activeView:       "dashboard",
+            notifBadgeActive: true,
+            meetings:         [...DEFAULT_SEED_MEETINGS],
+            logs:             [...DEFAULT_SEED_LOGS],
+            quietHours:       { enabled: false, start: "23:00", end: "07:00" }
+        };
+
+        function loadStateFromCache() {
+            const raw = localStorage.getItem('WORKSPACE_PROD_STATE');
+            if (!raw) return;
+            try {
+                const s = JSON.parse(raw);
+                if (s.profile && Array.isArray(s.logs) && Array.isArray(s.meetings)) appState = s;
+                if (!appState.quietHours) appState.quietHours = { enabled: false, start: "23:00", end: "07:00" };
+            } catch(e) { console.error("Cache error", e); }
+        }
+        function commitStateToCache() {
+            localStorage.setItem('WORKSPACE_PROD_STATE', JSON.stringify(appState));
+        }
+
+        // ═══════════════════════════════════════════════
+        // TOAST
+        // ═══════════════════════════════════════════════
+        function showToast(msg, type = 'info') {
+            const colors = { info: 'bg-slate-800 text-white', success: 'bg-emerald-600 text-white', error: 'bg-red-600 text-white', warning: 'bg-amber-500 text-white' };
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto max-w-xs w-full ${colors[type]||colors.info} rounded-xl shadow-lg px-4 py-3 text-xs font-semibold toast-enter`;
+            toast.textContent = msg;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+
+        // ═══════════════════════════════════════════════
+        // CLOCK
+        // ═══════════════════════════════════════════════
+        function updateLiveClock() {
+            const el = document.getElementById('liveClock');
+            if (el) el.textContent = new Date().toTimeString().split(' ')[0];
+        }
+        setInterval(updateLiveClock, 1000);
+
+        // ═══════════════════════════════════════════════
+        // GRACE PERIOD HELPER
+        // ═══════════════════════════════════════════════
+        const GRACE_PERIOD_MS = 120000;
+
+        function isWithinGracePeriod(log) {
+            if (!log.createdAt) return false;
+            const ageMs = new Date().getTime() - new Date(log.createdAt).getTime();
+            return ageMs < GRACE_PERIOD_MS;
+        }
+
+        // ═══════════════════════════════════════════════
+        // QUIET HOURS
+        // ═══════════════════════════════════════════════
+        function isInQuietHours(targetDate) {
+            const qh = appState.quietHours;
+            if (!qh.enabled) return false;
+            const [sH, sM] = qh.start.split(':').map(Number);
+            const [eH, eM] = qh.end.split(':').map(Number);
+            const t = targetDate ? new Date(targetDate) : new Date();
+            const tMins = t.getHours() * 60 + t.getMinutes();
+            const sMins = sH * 60 + sM;
+            const eMins = eH * 60 + eM;
+            if (sMins > eMins) return tMins >= sMins || tMins < eMins;
+            return tMins >= sMins && tMins < eMins;
+        }
+
+        function getQuietHoursEndTime() {
+            const [eH, eM] = appState.quietHours.end.split(':').map(Number);
+            const end = new Date();
+            end.setHours(eH, eM, 0, 0);
+            if (end <= new Date()) end.setDate(end.getDate() + 1);
+            return end;
+        }
+
+        function saveQuietHours() {
+            appState.quietHours.enabled = document.getElementById('quietHoursToggle').checked;
+            appState.quietHours.start   = document.getElementById('quietStart').value;
+            appState.quietHours.end     = document.getElementById('quietEnd').value;
+            commitStateToCache();
+            updateQuietHoursUI();
+        }
+
+        function updateQuietHoursUI() {
+            const qh      = appState.quietHours;
+            const bar     = document.getElementById('quietHoursBar');
+            const statusEl= document.getElementById('quietHoursStatus');
+            const endSpan = document.getElementById('quietHoursEnd');
+            if (endSpan) endSpan.textContent = qh.end;
+            if (isInQuietHours()) {
+                bar.classList.remove('hidden');
+                if (statusEl) statusEl.textContent = `🌙 Quiet hours active: ${qh.start} – ${qh.end}`;
+            } else {
+                bar.classList.add('hidden');
+                if (statusEl) statusEl.textContent = qh.enabled ? `Quiet hours scheduled: ${qh.start} – ${qh.end}` : 'Quiet hours disabled.';
+            }
+            const toggle = document.getElementById('quietHoursToggle');
+            if (toggle) toggle.checked = qh.enabled;
+            const qs = document.getElementById('quietStart');
+            const qe = document.getElementById('quietEnd');
+            if (qs) qs.value = qh.start;
+            if (qe) qe.value = qh.end;
+        }
+
+        // ═══════════════════════════════════════════════
+        // PUSH NOTIFICATIONS
+        // ═══════════════════════════════════════════════
+        function requestPushPermission() {
+            if (!('Notification' in window)) { showToast('Your browser does not support notifications.', 'error'); return; }
+            Notification.requestPermission().then(perm => {
+                if (perm === 'granted') {
+                    showToast('✅ Push notifications enabled!', 'success');
+                    const btn = document.getElementById('pushPermBtn');
+                    btn.textContent = '✓ Enabled';
+                    btn.className = 'text-[10px] bg-emerald-50 text-emerald-600 font-bold border border-emerald-200 px-3 py-1.5 rounded cursor-default';
+                } else {
+                    showToast('Notifications blocked. Enable in browser settings.', 'warning');
+                }
+            });
+        }
+
+        function sendPushNotification(title, body) {
+            if (Notification.permission === 'granted') {
+                new Notification(title, { body });
+            }
+        }
+
+        function updatePushPermBtn() {
+            const btn = document.getElementById('pushPermBtn');
+            if (!btn) return;
+            if (!('Notification' in window)) { btn.textContent = 'Not Supported'; btn.disabled = true; return; }
+            if (Notification.permission === 'granted') {
+                btn.textContent = '✓ Enabled';
+                btn.className   = 'text-[10px] bg-emerald-50 text-emerald-600 font-bold border border-emerald-200 px-3 py-1.5 rounded cursor-default';
+            }
+        }
+
+        // ═══════════════════════════════════════════════
+        // OVERDUE COUNT
+        // ═══════════════════════════════════════════════
+        function getOverdueCount() {
+            const now = new Date();
+            return appState.logs.filter(log => {
+                if (log.status !== 'Pending' || !log.scheduledFor) return false;
+                if (isWithinGracePeriod(log)) return false;
+                return now > new Date(log.scheduledFor.replace(' ','T') + '+05:00');
+            }).length;
+        }
+
+        // ═══════════════════════════════════════════════
+        // AUTO RESOLVE + OVERDUE CHECK
+        // ═══════════════════════════════════════════════
+        function autoResolveAndCheckOverdue() {
+            const now = new Date();
+            let changed = false;
+
+            appState.logs = appState.logs.map(log => {
+                if (log.name === 'AI.Agent' && log.status === 'Pending' && log.scheduledFor) {
+                    if (isWithinGracePeriod(log)) return log;
+                    const scheduledTime = new Date(log.scheduledFor.replace(' ','T') + '+05:00');
+                    if (now >= scheduledTime) {
+                        changed = true;
+                        sendPushNotification('🔔 Reminder', log.action.replace('Set reminder: ','').replace('Voice reminder: ',''));
+                        showToast(`🔔 ${log.action.substring(0, 60)}`, 'success');
+                        return { ...log, status: 'Completed' };
+                    }
+                }
+                return log;
+            });
+
+            if (changed) {
+                commitStateToCache();
+                renderActivitiesDataLogTable(document.getElementById('globalSearch').value);
+                recalculatePlatformKPIs();
+                renderHistoryView();
+            }
+        }
+        setInterval(autoResolveAndCheckOverdue, 15000);
+
+        // ═══════════════════════════════════════════════
+        // NAV
+        // ═══════════════════════════════════════════════
+        function initializeNavigationMenus() {
+            const d = document.querySelector('.menu-nav-container');
+            const m = document.querySelector('.menu-nav-container-mobile');
+            let html = '';
+            SIDEBAR_ITEMS.forEach(item => {
+                const active = item.target === appState.activeView;
+                const cls = active ? 'bg-[#e2e8f0] text-[#1e5eb8]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800';
+                html += `<button onclick="switchActiveView('${item.target}')" data-target="${item.target}" class="nav-btn-node w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left cursor-pointer transition font-semibold text-xs ${cls}">${item.svg}${item.label}</button>`;
+            });
+            if (d) d.innerHTML = html;
+            if (m) m.innerHTML = html;
+        }
+
+        function switchActiveView(targetId) {
+            appState.activeView = targetId; commitStateToCache();
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+            const el = document.getElementById(`view-${targetId}`);
+            if (el) el.classList.remove('hidden');
+            document.querySelectorAll('.nav-btn-node').forEach(btn => {
+                const t = btn.getAttribute('data-target');
+                btn.className = `nav-btn-node w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left cursor-pointer transition font-semibold text-xs ${t===targetId?'bg-[#e2e8f0] text-[#1e5eb8]':'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`;
+            });
+            const matched = SIDEBAR_ITEMS.find(i => i.target === targetId);
+            document.getElementById('viewTitle').textContent = matched ? `${matched.label} Overview` : 'Workspace Console';
+            const backdrop = document.getElementById('sidebarMobileBackdrop');
+            if (backdrop && !backdrop.classList.contains('hidden')) toggleMobileMenu();
+            if (targetId === 'dashboard') setTimeout(recalculateChartGraphics, 50);
+            if (targetId === 'history')   renderHistoryView();
+        }
+
+        function toggleMobileMenu() {
+            const s = document.getElementById('sidebarMobile');
+            const b = document.getElementById('sidebarMobileBackdrop');
+            if (s.classList.contains('-translate-x-full')) { s.classList.remove('-translate-x-full'); b.classList.remove('hidden'); }
+            else { s.classList.add('-translate-x-full'); b.classList.add('hidden'); }
+        }
+        document.getElementById('sidebarMobileBackdrop').addEventListener('click', toggleMobileMenu);
+
+        function openModal(id)  { const m = document.getElementById(id); if (m) m.classList.remove('hidden'); }
+        function closeModal(id) { const m = document.getElementById(id); if (m) m.classList.add('hidden'); }
+
+        // ═══════════════════════════════════════════════
+        // MEETINGS
+        // ═══════════════════════════════════════════════
+        function renderMeetingsContainerList() {
+            const c = document.getElementById('meetingsContainer');
+            if (!c) return;
+            c.innerHTML = '';
+            if (!appState.meetings.length) { c.innerHTML = '<div class="text-[11px] text-slate-400 py-4 text-center font-medium">Clear calendar timeline.</div>'; return; }
+            [...appState.meetings].sort((a,b) => a.time.localeCompare(b.time)).forEach(meet => {
+                c.innerHTML += `<div class="flex justify-between items-center group border-b border-slate-50/60 pb-1.5 pt-0.5"><div class="flex gap-3 min-w-0"><span class="font-mono font-bold text-slate-400 shrink-0 select-none">${meet.time}</span><span class="font-medium text-slate-700 truncate" title="${meet.text}">${meet.text}</span></div><button onclick="deleteMeeting(${meet.id})" class="text-red-500 opacity-0 group-hover:opacity-100 hover:underline text-[10px] font-bold cursor-pointer transition shrink-0 ml-2">Delete</button></div>`;
+            });
+        }
+        function handleMeetingSubmit(e) {
+            e.preventDefault();
+            const t = document.getElementById('m_text'), ti = document.getElementById('m_time');
+            appState.meetings.push({ id: Date.now(), time: ti.value, text: t.value.trim() });
+            commitStateToCache(); renderMeetingsContainerList(); recalculatePlatformKPIs(); closeModal('meetingModal');
+            t.value = ''; ti.value = '';
+        }
+        function deleteMeeting(id) {
+            appState.meetings = appState.meetings.filter(m => m.id !== id);
+            commitStateToCache(); renderMeetingsContainerList(); recalculatePlatformKPIs();
+        }
+
+        // ═══════════════════════════════════════════════
+        // ACTIVITY LOG TABLE
+        // ═══════════════════════════════════════════════
+        function renderActivitiesDataLogTable(searchTerm = '') {
+            const tbody = document.getElementById('activityTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const q = searchTerm.trim().toLowerCase();
+            const filtered = appState.logs.filter(l =>
+                l.name.toLowerCase().includes(q) || l.action.toLowerCase().includes(q) || l.status.toLowerCase().includes(q)
+            );
+            document.getElementById('logCounter').textContent = `${filtered.length} Entries`;
+            if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 text-xs font-semibold">No operational logs found.</td></tr>`; return; }
+
+            const now = new Date();
+            filtered.forEach(log => {
+                let isOverdue = false;
+                if (log.status === 'Pending' && log.scheduledFor) {
+                    const isPastTime  = now > new Date(log.scheduledFor.replace(' ','T') + '+05:00');
+                    const isOldEnough = !isWithinGracePeriod(log);
+                    isOverdue = isPastTime && isOldEnough;
+                }
+
+                let badge = '';
+                if (log.status === 'Completed') {
+                    badge = `<span class="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-[11px] font-bold">✓ Completed</span>`;
+                } else if (isOverdue) {
+                    badge = `<span class="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-0.5 rounded-full text-[11px] font-bold"><span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block animate-pulse"></span> Overdue</span>`;
+                } else if (log.status === 'Pending') {
+                    badge = `<span class="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-[11px] font-bold"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span> Pending</span>`;
+                } else {
+                    badge = `<span class="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full text-[11px] font-bold"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-pulse"></span> Active</span>`;
+                }
+
+                const timeDisplay = log.scheduledFor
+                    ? `<span class="text-indigo-500 font-semibold">⏰ ${log.scheduledFor.substring(0,16)}</span>`
+                    : log.time;
+
+                const rowClass = isOverdue ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-slate-50/60';
+
+                tbody.innerHTML += `
+                    <tr class="${rowClass} transition border-b border-slate-100 last:border-none">
+                        <td class="py-3 px-4 text-slate-900 font-bold max-w-[100px] truncate" title="${log.name}">${log.name}</td>
+                        <td class="py-3 px-4 text-slate-600 font-normal pr-2 max-w-[200px] truncate" title="${log.action}">${log.action}</td>
+                        <td class="py-3 px-4 text-slate-400 font-medium whitespace-nowrap">${timeDisplay}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">${badge}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <button onclick="cycleRowStateCode(${log.id})" class="text-[11px] bg-slate-50 border border-slate-200 text-indigo-600 hover:bg-indigo-50 font-bold px-2 py-0.5 rounded cursor-pointer transition mr-1">Cycle</button>
+                            <button onclick="deleteLogEntryRow(${log.id})" class="text-[11px] text-red-500 hover:text-red-700 font-bold px-1 py-0.5 cursor-pointer transition">Delete</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function handleManualLogSubmit(e) {
+            e.preventDefault();
+            const n = document.getElementById('l_name'), a = document.getElementById('l_action'), s = document.getElementById('l_status');
+            appState.logs.unshift({
+                id:           Date.now(),
+                name:         n.value.trim(),
+                action:       a.value.trim(),
+                time:         "Just now",
+                status:       s.value,
+                scheduledFor: null,
+                createdAt:    new Date().toISOString()
+            });
+            commitStateToCache(); renderActivitiesDataLogTable(document.getElementById('globalSearch').value); recalculatePlatformKPIs(); closeModal('logModal');
+            n.value = ''; a.value = ''; s.value = 'Active'; switchActiveView('dashboard');
+        }
+
+        function cycleRowStateCode(id) {
+            const seq = ["Active","Pending","Completed"];
+            appState.logs = appState.logs.map(l => { if (l.id===id) l.status=seq[(seq.indexOf(l.status)+1)%seq.length]; return l; });
+            commitStateToCache(); renderActivitiesDataLogTable(document.getElementById('globalSearch').value); recalculatePlatformKPIs();
+        }
+
+        function deleteLogEntryRow(id) {
+            appState.logs = appState.logs.filter(l => l.id !== id);
+            commitStateToCache(); renderActivitiesDataLogTable(document.getElementById('globalSearch').value); recalculatePlatformKPIs();
+        }
+
+        document.getElementById('globalSearch').addEventListener('input', e => renderActivitiesDataLogTable(e.target.value));
+
+        // ═══════════════════════════════════════════════
+        // HISTORY VIEW
+        // ═══════════════════════════════════════════════
+        function renderHistoryView() {
+            const container = document.getElementById('historyContainer');
+            if (!container) return;
+            const now = new Date();
+            const historyLogs = appState.logs.filter(l => {
+                if (l.status === 'Completed') return true;
+                if (l.status === 'Pending' && l.scheduledFor && !isWithinGracePeriod(l)) {
+                    return now > new Date(l.scheduledFor.replace(' ','T')+'+05:00');
+                }
+                return false;
+            });
+            if (!historyLogs.length) {
+                container.innerHTML = '<div class="text-center text-slate-400 text-xs font-semibold py-12">No reminder history yet. Completed reminders will appear here.</div>';
+                return;
+            }
+            container.innerHTML = '';
+            historyLogs.forEach(log => {
+                const isCompleted = log.status === 'Completed';
+                const badge = isCompleted
+                    ? `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">✓ Completed</span>`
+                    : `<span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full shrink-0">✗ Missed</span>`;
+                const timeStr = log.scheduledFor ? log.scheduledFor.substring(0,16) : log.time;
+                container.innerHTML += `
+                    <div class="flex items-start gap-3 p-3 rounded-lg border ${isCompleted?'border-emerald-100 bg-emerald-50/30':'border-red-100 bg-red-50/30'}">
+                        <div class="text-lg shrink-0">${isCompleted?'✅':'❌'}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-slate-800 leading-snug break-words">${log.action}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">⏰ ${timeStr} · ${log.name}</p>
+                        </div>
+                        ${badge}
+                    </div>`;
+            });
+        }
+
+        function clearHistory() {
+            if (!confirm('Remove all completed/missed entries from logs?')) return;
+            appState.logs = appState.logs.filter(l => l.status !== 'Completed');
+            commitStateToCache(); renderHistoryView(); renderActivitiesDataLogTable(); recalculatePlatformKPIs();
+            showToast('History cleared.', 'info');
+        }
+
+        // ═══════════════════════════════════════════════
+        // PROFILE
+        // ═══════════════════════════════════════════════
+        function updateProfileHandle() {
+            const input = document.getElementById('usernameSettingInput'), val = input.value.trim();
+            if (!val) return alert('Name cannot be blank.');
+            appState.profile.name = val; commitStateToCache(); syncDOMProfileElements(); input.value = ''; switchActiveView('dashboard');
+        }
+        function syncDOMProfileElements() {
+            const name = appState.profile.name || "User";
+            document.getElementById('userNameHeader').textContent = name;
+            document.getElementById('welcomeName').textContent    = name;
+        }
+        function toggleNotificationBadge() {
+            const badge = document.getElementById('notifBadge');
+            appState.notifBadgeActive = !appState.notifBadgeActive; commitStateToCache();
+            badge.classList.toggle('hidden', !appState.notifBadgeActive);
+        }
+        function handleLogOut() {
+            if (confirm("Reset localStorage to baseline seeds?")) { localStorage.removeItem('WORKSPACE_PROD_STATE'); window.location.reload(); }
+        }
+        function exportLogsToJSON() {
+            const d = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState.logs, null, 2));
+            const a = document.createElement('a'); a.setAttribute("href", d); a.setAttribute("download", `activity_dump_${Date.now()}.json`);
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+
+        // ═══════════════════════════════════════════════
+        // KPI + STATISTICS
+        // ═══════════════════════════════════════════════
+        function recalculatePlatformKPIs() {
+            const now      = new Date();
+            const aiLogs   = appState.logs.filter(l => l.name === 'AI.Agent');
+            const pending  = appState.logs.filter(l => l.status==='Pending'||l.status==='Active').length;
+            const completed= appState.logs.filter(l => l.status==='Completed').length;
+            const total    = appState.logs.length;
+
+            document.getElementById('kpi-projects').textContent     = pending;
+            document.getElementById('kpi-team').textContent         = appState.meetings.length;
+            document.getElementById('kpi-tasks').textContent        = completed;
+            document.getElementById('kpi-productivity').textContent = total ? `${Math.round((completed/total)*100)}%` : '0%';
+            document.getElementById('kpi-overdue').textContent      = `${getOverdueCount()} overdue`;
+
+            const todayStr    = now.toDateString();
+            const setToday    = aiLogs.filter(l => l.scheduledFor && new Date(l.scheduledFor.replace(' ','T')+'+05:00').toDateString()===todayStr).length;
+            const completedAI = aiLogs.filter(l => l.status==='Completed').length;
+            const missedAI    = aiLogs.filter(l =>
+                l.status==='Pending' &&
+                l.scheduledFor &&
+                !isWithinGracePeriod(l) &&
+                now > new Date(l.scheduledFor.replace(' ','T')+'+05:00')
+            ).length;
+            const totalFired  = completedAI + missedAI;
+
+            document.getElementById('stat-today').textContent     = setToday;
+            document.getElementById('stat-completed').textContent = completedAI;
+            document.getElementById('stat-missed').textContent    = missedAI;
+            document.getElementById('stat-ontime').textContent    = totalFired ? `${Math.round((completedAI/totalFired)*100)}%` : '—';
+
+            recalculateChartGraphics();
+        }
+
+        // ═══════════════════════════════════════════════
+        // CHART
+        // ═══════════════════════════════════════════════
+        const canvas = document.getElementById('activityChart');
+        const ctx    = canvas.getContext('2d');
+        function recalculateChartGraphics() {
+            if (appState.activeView !== 'dashboard') return;
+            const dpr = window.devicePixelRatio||1, rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width*dpr; canvas.height = rect.height*dpr; ctx.scale(dpr,dpr);
+            drawSplineChartMetrics(rect.width, rect.height);
+        }
+        function drawSplineChartMetrics(w,h) {
+            ctx.clearRect(0,0,w,h);
+            const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+            const completed = appState.logs.filter(l=>l.status==='Completed').length;
+            const weights = [20,30,25,40,45,35,50].map(b=>Math.min(100,b+completed*4));
+            const pL=30,pR=30,pT=40,pB=30,gW=w-pL-pR,gH=h-pT-pB;
+            ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=1;
+            for(let i=0;i<=4;i++){const y=pT+(gH/4)*i;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(w-pR,y);ctx.stroke();}
+            const pts=weights.map((v,i)=>({x:pL+(gW/(weights.length-1))*i,y:pT+gH-((v/100)*gH),v}));
+            const grad=ctx.createLinearGradient(0,pT,0,h-pB);
+            grad.addColorStop(0,'rgba(30,94,184,0.22)'); grad.addColorStop(1,'rgba(30,94,184,0.00)');
+            ctx.beginPath(); ctx.moveTo(pts[0].x,h-pB); ctx.lineTo(pts[0].x,pts[0].y);
+            for(let i=0;i<pts.length-1;i++){const xc=(pts[i].x+pts[i+1].x)/2,yc=(pts[i].y+pts[i+1].y)/2;ctx.quadraticCurveTo(pts[i].x,pts[i].y,xc,yc);}
+            ctx.lineTo(pts[pts.length-1].x,pts[pts.length-1].y); ctx.lineTo(pts[pts.length-1].x,h-pB);
+            ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+            ctx.strokeStyle='#1e5eb8'; ctx.lineWidth=2.5; ctx.lineCap='round';
+            ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+            for(let i=0;i<pts.length-1;i++){const xc=(pts[i].x+pts[i+1].x)/2,yc=(pts[i].y+pts[i+1].y)/2;ctx.quadraticCurveTo(pts[i].x,pts[i].y,xc,yc);}
+            ctx.lineTo(pts[pts.length-1].x,pts[pts.length-1].y); ctx.stroke();
+            pts.forEach((pt,i)=>{ctx.fillStyle='#475569';ctx.font='bold 10px Inter';ctx.textAlign='center';ctx.fillText(pt.v,pt.x,pt.y-8);ctx.fillStyle='#94a3b8';ctx.font='600 10px Inter';ctx.fillText(days[i],pt.x,h-10);});
+        }
+        window.addEventListener('resize', recalculateChartGraphics);
+
+        // ═══════════════════════════════════════════════
+        // STATUS BOX
+        // ═══════════════════════════════════════════════
+        const statusBox      = document.getElementById('statusBox');
+        const pulseIndicator = document.getElementById('pulseIndicator');
+        const textInput      = document.getElementById('textInput');
+        const micBtn         = document.getElementById('micBtn');
+        const submitBtn      = document.getElementById('submitBtn');
+
+        function updatePipelineStatusDOM(msg, isError=false) {
+            statusBox.textContent = msg;
+            if (isError) { statusBox.className="text-[10px] font-semibold p-2 rounded text-center bg-red-50 text-red-600 border border-red-100"; pulseIndicator.className="w-2 h-2 rounded-full bg-red-500 animate-ping"; }
+            else         { statusBox.className="text-[10px] font-semibold p-2 rounded text-center bg-slate-50 text-slate-600 border border-slate-100"; pulseIndicator.className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"; }
+        }
+
+        // ═══════════════════════════════════════════════
+        // LOCAL TIME PARSER
+        // ═══════════════════════════════════════════════
+        function parseReminderLocally(text) {
+            const now=new Date(), lower=text.toLowerCase();
+            let targetTime=null, task=text;
+            const absMatch  = lower.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+            const relMatch  = lower.match(/in\s+(\d+)\s*(minute|min|hour|hr)s?/i);
+            const urduMatch = lower.match(/(\d{1,2})\s*baj/i);
+            if (absMatch) {
+                let h=parseInt(absMatch[1]),m=parseInt(absMatch[2]||'0'),mer=absMatch[3];
+                if(mer==='pm'&&h<12)h+=12; if(mer==='am'&&h===12)h=0;
+                targetTime=new Date(now); targetTime.setHours(h,m,0,0);
+                task=text.replace(new RegExp(absMatch[0],'i'),'').replace(/\s+/g,' ').trim();
+            } else if (relMatch) {
+                const amt=parseInt(relMatch[1]),unit=relMatch[2].toLowerCase();
+                targetTime=new Date(now.getTime()+amt*(unit.startsWith('h')?3600000:60000));
+                task=text.replace(new RegExp(relMatch[0],'i'),'').replace(/\s+/g,' ').trim();
+            } else if (urduMatch) {
+                let h=parseInt(urduMatch[1]); if(h<7)h+=12;
+                targetTime=new Date(now); targetTime.setHours(h,0,0,0);
+            }
+            task=task.replace(/^(remind me to|remind me|set a reminder to|set reminder to|mujhe yaad dilana|yaad dilao)\s*/i,'').replace(/\s+/g,' ').trim();
+            if(task.length>0) task=task.charAt(0).toUpperCase()+task.slice(1);
+            if(!targetTime) return {task:task||text,timeDisplay:'AI will extract the time',dateDisplay:'Today',isPast:false,targetTime:null};
+            const hh=targetTime.getHours(),mm=targetTime.getMinutes().toString().padStart(2,'0'),ap=hh>=12?'PM':'AM',dh=(hh%12)||12;
+            const timeDisplay=`${dh}:${mm} ${ap} PKT`;
+            const tomorrow=new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
+            let dateDisplay;
+            if(targetTime.toDateString()===now.toDateString()) dateDisplay='Today — '+targetTime.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+            else if(targetTime.toDateString()===tomorrow.toDateString()) dateDisplay='Tomorrow — '+targetTime.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+            else dateDisplay=targetTime.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+            return {task,timeDisplay,dateDisplay,isPast:targetTime<now,targetTime};
+        }
+
+        // ═══════════════════════════════════════════════
+        // PREVIEW MODAL
+        // ═══════════════════════════════════════════════
+        let lastVoiceLogId = null;
+
+        function populatePreviewModal({task,timeDisplay,dateDisplay,inputLabel,isPast,scheduledFor}) {
+            document.getElementById('previewTask').textContent      = task;
+            document.getElementById('previewTime').textContent      = timeDisplay;
+            document.getElementById('previewDate').textContent      = dateDisplay;
+            document.getElementById('previewInputText').textContent = inputLabel;
+            document.getElementById('previewWarning').classList.toggle('hidden', !isPast);
+            const qWarn = document.getElementById('previewQuietWarning');
+            const qMsg  = document.getElementById('previewQuietMsg');
+            if (scheduledFor && isInQuietHours(new Date(scheduledFor.replace(' ','T')+'+05:00'))) {
+                const end = getQuietHoursEndTime();
+                const pad = n => String(n).padStart(2,'0');
+                qMsg.textContent = `🌙 Falls in quiet hours — delayed to ${pad(end.getHours())}:${pad(end.getMinutes())} PKT.`;
+                qWarn.classList.remove('hidden');
+            } else {
+                qWarn.classList.add('hidden');
+            }
+        }
+
+        function closePreviewModal() { document.getElementById('previewModal').classList.add('hidden'); }
+
+        function showTextPreview(inputText) {
+            const parsed = parseReminderLocally(inputText);
+            document.getElementById('previewModalTitle').textContent = 'Confirm Reminder';
+            const pad = n => String(n).padStart(2,'0');
+            const sfStr = parsed.targetTime
+                ? `${parsed.targetTime.getFullYear()}-${pad(parsed.targetTime.getMonth()+1)}-${pad(parsed.targetTime.getDate())} ${pad(parsed.targetTime.getHours())}:${pad(parsed.targetTime.getMinutes())}:00`
+                : null;
+            populatePreviewModal({ task: parsed.task||inputText, timeDisplay: parsed.timeDisplay, dateDisplay: parsed.dateDisplay, inputLabel: `"${inputText}"`, isPast: parsed.isPast, scheduledFor: sfStr });
+            document.getElementById('previewBtns').innerHTML = `
+                <button onclick="closePreviewModal()" class="flex-1 border border-slate-200 rounded-lg text-xs font-semibold py-2.5 text-slate-500 hover:bg-slate-50 cursor-pointer transition">✕ Cancel</button>
+                <button onclick="confirmTextSubmit()" class="flex-1 bg-[#1e5eb8] hover:bg-[#15468a] text-white rounded-lg text-xs font-bold py-2.5 cursor-pointer transition shadow-sm">✓ Confirm & Set</button>
+            `;
+            document.getElementById('previewModal').classList.remove('hidden');
+        }
+
+        function showVoiceResultPreview({reminderText, scheduledFor, logId}) {
+            let timeDisplay='Extracted by AI', dateDisplay='', isPast=false;
+            if (scheduledFor) {
+                const dt=new Date(scheduledFor.replace(' ','T')+'+05:00'), now=new Date();
+                const hh=dt.getHours(),mm=dt.getMinutes().toString().padStart(2,'0'),ap=hh>=12?'PM':'AM',dh=(hh%12)||12;
+                timeDisplay=`${dh}:${mm} ${ap} PKT`;
+                const tomorrow=new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
+                if(dt.toDateString()===now.toDateString()) dateDisplay='Today — '+dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+                else if(dt.toDateString()===tomorrow.toDateString()) dateDisplay='Tomorrow — '+dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+                else dateDisplay=dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+                isPast=dt<now;
+            }
+            document.getElementById('previewModalTitle').textContent = '✓ Voice Reminder Created';
+            populatePreviewModal({ task: reminderText||'Reminder set', timeDisplay, dateDisplay, inputLabel:'🎤 Voice input — processed by AI', isPast, scheduledFor });
+            lastVoiceLogId = logId;
+            document.getElementById('previewBtns').innerHTML = `
+                <button onclick="undoVoiceReminder()" class="flex-1 border border-red-200 rounded-lg text-xs font-semibold py-2.5 text-red-500 hover:bg-red-50 cursor-pointer transition">↩ Undo</button>
+                <button onclick="closePreviewModal()" class="flex-1 bg-[#1e5eb8] hover:bg-[#15468a] text-white rounded-lg text-xs font-bold py-2.5 cursor-pointer transition shadow-sm">✓ OK, Got It</button>
+            `;
+            document.getElementById('previewModal').classList.remove('hidden');
+        }
+
+        function undoVoiceReminder() {
+            if (lastVoiceLogId) {
+                appState.logs = appState.logs.filter(l => l.id !== lastVoiceLogId);
+                commitStateToCache(); renderActivitiesDataLogTable(document.getElementById('globalSearch').value); recalculatePlatformKPIs();
+                lastVoiceLogId = null;
+                showToast('Voice reminder removed from local log. Calendar event may still exist.', 'warning');
+            }
+            closePreviewModal();
+        }
+
+        async function confirmTextSubmit() {
+            closePreviewModal();
+            const val = textInput.value.trim();
+            if (!val) return;
+            updatePipelineStatusDOM('Dispatching confirmed reminder...');
+            await transmitToPipelineWebhook('text', val);
+        }
+
+        // ═══════════════════════════════════════════════
+        // MIC — ONLY STARTS RECORDING
+        // Submit button handles stopping + sending
+        // ═══════════════════════════════════════════════
+        let runtimeRecorder=null, rawAudioSegments=[], stateRecordingActive=false;
+
+        micBtn.addEventListener('click', async () => {
+            // If already recording, ignore mic click
+            // User must press Submit/Dispatch to stop and send
+            if (stateRecordingActive) {
+                showToast('🎤 Already recording — press Dispatch to send.', 'info');
+                return;
+            }
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioChunks = [];
-                
-                const options = MediaRecorder.isTypeSupported('audio/webm') 
-                    ? { mimeType: 'audio/webm' } 
+                rawAudioSegments = [];
+                const codec = MediaRecorder.isTypeSupported('audio/webm')
+                    ? { mimeType: 'audio/webm' }
                     : { mimeType: 'audio/ogg' };
 
-                mediaRecorder = new MediaRecorder(stream, options);
-                
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) audioChunks.push(e.data);
+                runtimeRecorder = new MediaRecorder(stream, codec);
+
+                runtimeRecorder.ondataavailable = e => {
+                    if (e.data.size > 0) rawAudioSegments.push(e.data);
                 };
 
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: options.mimeType });
-                    updateStatus('Audio capture complete. Shipping payload to pipeline...', 'info');
-                    await dispatchToPipeline('voice', audioBlob);
+                // ✅ onstop fires automatically when submit button
+                // calls runtimeRecorder.stop()
+                runtimeRecorder.onstop = async () => {
+                    const blob = new Blob(rawAudioSegments, { type: codec.mimeType });
+                    updatePipelineStatusDOM('Sending voice to AI...');
+                    await transmitToPipelineWebhook('voice', blob);
                 };
 
-                mediaRecorder.start();
-                isRecording = true;
-                micBtn.classList.add('recording');
-                updateStatus('Listening... Speak your reminder clearly now.', 'info');
-            } catch (err) {
-                console.error('Audio Setup Failure:', err);
-                updateStatus('Hardware Fault: Mic permission denied or missing.', 'error');
+                runtimeRecorder.start();
+                stateRecordingActive = true;
+
+                // Visual feedback — mic turns red and pulses
+                micBtn.classList.add('text-red-500', 'animate-pulse');
+                updatePipelineStatusDOM('🎤 Recording... Press Dispatch to send.');
+
+            } catch(err) {
+                updatePipelineStatusDOM('Hardware Exception: Audio stream blocked.', true);
             }
-        } else {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            isRecording = false;
-            micBtn.classList.remove('recording');
+        });
+
+        // ═══════════════════════════════════════════════
+        // SUBMIT BUTTON
+        // Handles BOTH text and voice submission
+        // ═══════════════════════════════════════════════
+        submitBtn.addEventListener('click', () => {
+
+            // ✅ VOICE MODE: If recording is active, stop it and send
+            if (stateRecordingActive) {
+                runtimeRecorder.stop();
+                runtimeRecorder.stream.getTracks().forEach(t => t.stop());
+                stateRecordingActive = false;
+                micBtn.classList.remove('text-red-500', 'animate-pulse');
+                updatePipelineStatusDOM('Processing voice input...');
+                // onstop handler fires automatically
+                // and calls transmitToPipelineWebhook('voice', blob)
+                return;
+            }
+
+            // ✅ TEXT MODE: Normal text submission
+            const val = textInput.value.trim();
+            if (!val) return updatePipelineStatusDOM('Validation failure: String input block empty.', true);
+            showTextPreview(val);
+        });
+
+        // ═══════════════════════════════════════════════
+        // TRANSMIT TO N8N
+        // ═══════════════════════════════════════════════
+        async function transmitToPipelineWebhook(mode, payloadData) {
+            submitBtn.disabled = true;
+            try {
+                const form = new FormData();
+                form.append('inputType', mode);
+                if (mode==='text') form.append('textPayload', payloadData);
+                else form.append('audioFile', payloadData, 'payload.webm');
+
+                let targetURL = WEBHOOK_ENDPOINT;
+                const useProxy = window.location.protocol === 'https:';
+                if (useProxy) targetURL = 'https://cors-anywhere.herokuapp.com/' + WEBHOOK_ENDPOINT;
+                const cfg = { method: 'POST', body: form };
+                if (useProxy) cfg.headers = { 'X-Requested-With': 'XMLHttpRequest' };
+
+                const res = await fetch(targetURL, cfg);
+                if (!res.ok) throw new Error(`Server error: ${res.status}`);
+                const json = await res.json();
+
+                if (json.success) {
+                    const reminderText = json.reminderText || (mode==='text' ? payloadData : 'Voice reminder');
+                    let scheduledFor   = json.scheduledFor || null;
+
+                    // Quiet hours adjustment
+                    if (scheduledFor && isInQuietHours(new Date(scheduledFor.replace(' ','T')+'+05:00'))) {
+                        const end = getQuietHoursEndTime();
+                        const pad = n => String(n).padStart(2,'0');
+                        scheduledFor = `${end.getFullYear()}-${pad(end.getMonth()+1)}-${pad(end.getDate())} ${pad(end.getHours())}:${pad(end.getMinutes())}:00`;
+                        showToast(`🌙 Quiet hours — reminder delayed to ${pad(end.getHours())}:${pad(end.getMinutes())} PKT`, 'warning');
+                    }
+
+                    const newLogId = Date.now();
+                    appState.logs.unshift({
+                        id:           newLogId,
+                        name:         "AI.Agent",
+                        action:       mode==='text' ? `Set reminder: "${reminderText}"` : `Voice reminder: "${reminderText}"`,
+                        time:         "Just now",
+                        status:       "Pending",
+                        scheduledFor: scheduledFor,
+                        createdAt:    new Date().toISOString()
+                    });
+
+                    commitStateToCache();
+                    renderActivitiesDataLogTable();
+                    recalculatePlatformKPIs();
+
+                    if (mode === 'text') {
+                        textInput.value = '';
+                        updatePipelineStatusDOM(scheduledFor ? `⏳ Reminder set for ${scheduledFor.substring(11,16)} PKT.` : '⏳ Reminder queued as Pending.');
+                    } else {
+                        showVoiceResultPreview({ reminderText, scheduledFor, logId: newLogId });
+                        updatePipelineStatusDOM('✅ Voice reminder created. Review above.');
+                    }
+                } else {
+                    updatePipelineStatusDOM('Pipeline exception error: data extraction failed.', true);
+                }
+            } catch(err) {
+                updatePipelineStatusDOM(`Pipeline Offline: ${err.message}`, true);
+            } finally {
+                submitBtn.disabled = false;
+            }
         }
-    });
 
-    // --- MANUAL TEXT SUBMISSION ---
-    submitBtn.addEventListener('click', async () => {
-        const textVal = textInput.value.trim();
-        if (!textVal) {
-            updateStatus('Input Error: Please type a valid command first.', 'error');
-            return;
-        }
-        updateStatus('Sending text instructions to n8n parser...', 'info');
-        await dispatchToPipeline('text', textVal);
-    });
-
-    // --- NETWORK TRANSMISSION LAYER ---
-    async function dispatchToPipeline(type, data) {
-        submitBtn.disabled = true;
-        
-        try {
-            const formData = new FormData();
-            formData.append('inputType', type);
-
-            if (type === 'text') {
-                formData.append('textPayload', data);
-            } else if (type === 'voice') {
-                formData.append('audioFile', data, 'recording.webm');
-            }
-
-            let fetchUrl = TARGET_WEBHOOK;
-            const isHttps = window.location.protocol === 'https:';
-            
-            if (isHttps) {
-                fetchUrl = 'https://cors-anywhere.herokuapp.com/' + TARGET_WEBHOOK;
-            }
-
-            // Build request options dynamically
-            const fetchOptions = {
-                method: 'POST',
-                body: formData
-            };
-
-            // Only append custom header if routing through the proxy bridge to prevent preflight local failures
-            if (isHttps) {
-                fetchOptions.headers = {
-                    'X-Requested-With': 'XMLHttpRequest'
-                };
-            }
-
-            const response = await fetch(fetchUrl, fetchOptions);
-
-            if (!response.ok) {
-                throw new Error(`Endpoint returned status code: ${response.status}`);
-            }
-
-            const parsedRes = await response.json();
-            
-            if (parsedRes.success) {
-                updateStatus(`🎉 Success: ${parsedRes.message || 'Reminder successfully tracked!'}`, 'success');
-                if (type === 'text') textInput.value = '';
-            } else {
-                updateStatus('⚠️ Pipeline tracking warning. Internal engine dropped parse parameters.', 'error');
-            }
-
-        } catch (error) {
-            console.error('Pipeline Fault Context:', error);
-            
-            // Helpful message showing you the exact breaking error parameter
-            updateStatus(`Execution Error: ${error.message}`, 'error');
-            
-            if (window.location.protocol === 'https:' && error.message.includes('Failed to fetch')) {
-                setTimeout(() => {
-                    updateStatus('Proxy Activation Required: Please open https://cors-anywhere.herokuapp.com/corsdemo and click "Request temporary access"!', 'error');
-                }, 4000);
-            }
-        } finally {
-            submitBtn.disabled = false;
-        }
-    }
-</script>
-
+        // ═══════════════════════════════════════════════
+        // BOOTSTRAP
+        // ═══════════════════════════════════════════════
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStateFromCache();
+            initializeNavigationMenus();
+            syncDOMProfileElements();
+            if (!appState.notifBadgeActive) document.getElementById('notifBadge').classList.add('hidden');
+            renderMeetingsContainerList();
+            renderActivitiesDataLogTable();
+            recalculatePlatformKPIs();
+            updateLiveClock();
+            updateQuietHoursUI();
+            updatePushPermBtn();
+            setTimeout(autoResolveAndCheckOverdue, 15000);
+        });
+    </script>
 </body>
 </html>
