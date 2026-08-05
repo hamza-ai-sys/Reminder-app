@@ -428,7 +428,7 @@
         // ═══════════════════════════════════════════════
         // CONFIG
         // ═══════════════════════════════════════════════
-        const WEBHOOK_ENDPOINT = 'http://localhost:5678/webhook-test/voice-reminder';
+        const WEBHOOK_ENDPOINT = 'https://n8n.murawat.com/webhook/voice-reminder';
 
         // ═══════════════════════════════════════════════
         // SIDEBAR
@@ -1146,11 +1146,8 @@
                 if (mode==='text') form.append('textPayload', payloadData);
                 else form.append('audioFile', payloadData, 'payload.webm');
 
-                let targetURL = WEBHOOK_ENDPOINT;
-                const useProxy = window.location.protocol === 'https:';
-                if (useProxy) targetURL = 'https://cors-anywhere.herokuapp.com/' + WEBHOOK_ENDPOINT;
+                const targetURL = WEBHOOK_ENDPOINT;
                 const cfg = { method: 'POST', body: form };
-                if (useProxy) cfg.headers = { 'X-Requested-With': 'XMLHttpRequest' };
 
                 const res = await fetch(targetURL, cfg);
                 if (!res.ok) throw new Error(`Server error: ${res.status}`);
